@@ -36,6 +36,7 @@ const API = {
       stations: META.stations.map(s => ({n:s.n, b:s.b, l:s.l})),
       bus_stations: META.bus_stations.map(i => byId[i].n),
       presets: META.presets,
+      acquired: META.acquired, contact: META.contact, built: META.built,
     };
   },
 

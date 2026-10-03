@@ -4,6 +4,7 @@ const API = {
     const m = await (await fetch("/api/meta")).json();
     m.presets = [19,20].map(h=>h*60);
     Object.assign(m, await fetch("site.json").then(r=>r.ok?r.json():{}).catch(()=>({})));
+    m.contact = {contact_label:m.contact_label, contact_url:m.contact_url};
     return m;
   },
   busstops: st => fetch("/api/busstops?station="+encodeURIComponent(st)).then(r=>r.json()),
