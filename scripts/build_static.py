@@ -4,103 +4,83 @@
 **時刻表そのものは配らない。** 公共交通オープンデータ基本ライセンス第8条4項(1) が
 「元のデータの大部分を復元可能な派生データ」の再配布を禁じているため、
 ブラウザに時刻表を送って探索させる作りは採れない。
-代わりに「自宅 × 候補駅」の探索結果（帰宅リミット・所要時間・経路の駅の並び）だけを先に計算して配る。
+代わりに「自宅 × 駅」の探索結果（帰宅リミット・所要時間・経路の区間）だけを先に計算して配る。
 
 出力（site/data/）
-  meta.json            駅・候補駅・集合時刻の一覧
-  home/<駅>.json       その駅に住む人の 帰宅リミット と 所要時間（候補駅ぶん）
-  bus/<駅>.json        その駅から乗れるバスと、最終バスごとの帰宅リミット
-  route/<候補>.json    その駅から各自宅への帰りの経路（駅の並びと路線名。時刻は出発時刻だけ）
-  bars/<候補>.json     その駅の半径 500m の飲み屋
+  meta.json            駅・路線（駅の並びとラインカラー）・集合時刻の一覧
+  home/<駅>.json       その駅に住む人の 帰宅リミット と 所要時間（全駅ぶん）
+  route/<自宅>.json    その自宅への帰りの経路。区間は [路線, 乗る駅, 降りる駅] の 3 つだけで、
+                       途中の駅は路線の駅順から画面側で引き直す（容量を 1/4 にするため）
+  bars/<駅>.json       その駅の半径 500m の飲み屋
 """
 import json, shutil, sys, time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from network import Network, fmt   # noqa: E402
+from network import Network, dist_m   # noqa: E402
 
 SITE = ROOT / "site"
 DATA = SITE / "data"
-PRESETS = [19 * 60, 20 * 60]   # 集合時刻（事前計算なので候補を絞る。増やすと比例して時間がかかる）
-CAND_MIN_BARS = 10        # 候補駅に入れる最低の飲み屋の数
+PRESETS = [19 * 60]   # 集合時刻は 19:00 に固定（画面からも外した）
 NEG = -10**6
 
 
 def main(limit_rows=None):
     t0 = time.time()
     net = Network(since=min(PRESETS))
+    n_node = len(net.node_name)
     bars_by = {b["node"]: b for b in json.loads((ROOT / "data" / "bars_by_station.json").read_text())}
     bars_pts = json.loads((ROOT / "data" / "bars_points.json").read_text())
-    busstops = json.loads((ROOT / "data" / "busstops.json").read_text())
     index = json.loads((ROOT / "data" / "index.json").read_text())
     name2id = {}
     for n in index:
         name2id.setdefault(n["name"], n["id"])
+    print(f"駅 {n_node} / 便 {len(net.trips)}", flush=True)
 
-    cands = [n["id"] for n in index if n["bars"] >= CAND_MIN_BARS]
-    cpos = {c: i for i, c in enumerate(cands)}
-    print(f"候補駅 {len(cands)} / 駅 {len(index)}", flush=True)
-
-    for d in ("home", "bus", "route", "bars"):
+    for d in ("home", "route", "bars"):
         (DATA / d).mkdir(parents=True, exist_ok=True)
 
-    # --- 飲み屋（候補駅ごと） ---
-    from network import dist_m
+    # --- 飲み屋（飲み屋のある駅だけ） ---
     grid = {}
     for b in bars_pts:
         grid.setdefault((round(b[0], 2), round(b[1], 2)), []).append(b)
-    for c in cands:
-        la, lo = net.node_pos[c]
-        near = []
-        for dy in (-0.01, 0, 0.01):
-            for dx in (-0.01, 0, 0.01):
-                for b in grid.get((round(la + dy, 2), round(lo + dx, 2)), []):
-                    if dist_m((la, lo), (b[0], b[1])) <= 500:
-                        near.append({"lat": b[0], "lon": b[1], "name": b[2], "kind": b[3]})
-        (DATA / "bars" / f"{c}.json").write_text(json.dumps(near, ensure_ascii=False))
-    print(f"飲み屋ファイル {len(cands)} 本  {time.time()-t0:.0f}s", flush=True)
-
-    # --- 行（自宅）の一覧をつくる ---
-    homes = [n["id"] for n in index]
-    bus_rows = []        # (駅ノード, 最終バス時刻)
-    for st, lst in busstops.items():
-        nid = name2id.get(st)
-        if nid is None:
+    n_bar_files = 0
+    for n in index:
+        if not n["bars"]:
             continue
-        for last in sorted({b["last"] for b in lst}):
-            bus_rows.append((nid, last))
+        la, lo = n["lat"], n["lon"]
+        near = [{"lat": b[0], "lon": b[1], "name": b[2], "kind": b[3]}
+                for dy in (-0.01, 0, 0.01) for dx in (-0.01, 0, 0.01)
+                for b in grid.get((round(la + dy, 2), round(lo + dx, 2)), [])
+                if dist_m((la, lo), (b[0], b[1])) <= 500]
+        (DATA / "bars" / f"{n['id']}.json").write_text(json.dumps(near, ensure_ascii=False))
+        n_bar_files += 1
+    print(f"飲み屋ファイル {n_bar_files} 本  {time.time()-t0:.0f}s", flush=True)
+
+    # --- 行（自宅）の一覧。終電は鉄道だけで考える（2026-10-07 ユーザー指示でバスは外した） ---
+    homes = [n["id"] for n in index]
     if limit_rows:
-        homes, bus_rows = homes[:limit_rows], bus_rows[:limit_rows]
-    print(f"自宅 {len(homes)} / バスの組 {len(bus_rows)}", flush=True)
-
-    routes = {c: {} for c in cands}      # 候補駅 -> {行キー: 経路}
-    lines = {}                           # 路線名 -> 連番
-
-    def enc(legs):
-        out = []
-        for lg in legs:
-            nm = lg["line"]
-            if nm not in lines:
-                lines[nm] = len(lines)
-            out.append([lines[nm]] + lg["nodes"])
-        return out
+        homes = homes[:limit_rows]
+    print(f"自宅 {len(homes)}", flush=True)
 
     def do_row(home, deadline, key, store_travel):
+        """1 回の逆向き探索で、全駅のリミットと全駅からの帰りの経路が取れる。"""
         lab, par = net.latest_departure_paths(home, deadline=deadline)
-        lim = [lab[c] if lab[c] > NEG else -1 for c in cands]
-        for c in cands:
-            if lab[c] <= NEG:
+        routes = {}
+        for x in range(n_node):
+            if lab[x] <= NEG or x == home:
                 continue
-            legs = net.rebuild(par, lab, c, home)
+            legs = net.rebuild(par, lab, x, home)
             if legs:
-                routes[c][key] = enc(legs)
-        rec = {"limit": lim}
+                routes[x] = [[lg["rw"], lg["nodes"][0], lg["nodes"][-1]] for lg in legs]
+        (DATA / "route" / f"{key}.json").write_text(json.dumps(routes, separators=(",", ":")))
+        rec = {"limit": [lab[x] if lab[x] > NEG else -1 for x in range(n_node)]}
         if store_travel:
             rec["travel"] = {}
             for p in PRESETS:
                 arr = net.earliest_arrival(home, p)
-                rec["travel"][str(p)] = [arr[c] - p if arr[c] < 10**6 else -1 for c in cands]
+                rec["travel"][str(p)] = [arr[x] - p if arr[x] < 10**6 else -1 for x in range(n_node)]
         return rec
 
     for i, h in enumerate(homes, 1):
@@ -109,36 +89,32 @@ def main(limit_rows=None):
         if i % 100 == 0:
             print(f"  自宅 {i}/{len(homes)}  {time.time()-t0:.0f}s", flush=True)
 
-    bus_out = {}
-    for i, (nid, last) in enumerate(bus_rows, 1):
-        rec = do_row(nid, last, f"b{nid}_{last}", False)
-        bus_out.setdefault(nid, {})[str(last)] = rec["limit"]
-        if i % 100 == 0:
-            print(f"  バス {i}/{len(bus_rows)}  {time.time()-t0:.0f}s", flush=True)
-    for st, lst in busstops.items():
-        nid = name2id.get(st)
-        if nid is None or nid not in bus_out:
-            continue
-        (DATA / "bus" / f"{nid}.json").write_text(json.dumps(
-            {"stops": lst, "limits": bus_out[nid]}, ensure_ascii=False, separators=(",", ":")))
+    # --- 路線（駅の並びとラインカラー）。経路の描画と路線網の表示の両方に使う ---
+    rails = []
+    for rid in net.railways:
+        order, seen = [], set()
+        for sid in net.railway_order.get(rid, []):
+            nid = net.sta2node.get(sid)
+            if nid is not None and nid not in seen:
+                seen.add(nid)
+                order.append(nid)
+        rails.append({"t": net.railway_title.get(rid, ""), "c": net.railway_color.get(rid), "o": order})
 
-    for c in cands:
-        (DATA / "route" / f"{c}.json").write_text(json.dumps(routes[c], separators=(",", ":")))
-
+    site_cfg = json.loads((ROOT / "data" / "site.json").read_text())
     meta = {
         "stations": [{"id": n["id"], "n": n["name"], "lat": n["lat"], "lon": n["lon"],
                       "b": n["bars"], "m": n["median_m"], "l": n["lines"]} for n in index],
-        "cands": cands,
         "presets": PRESETS,
-        "lines": [k for k, _ in sorted(lines.items(), key=lambda kv: kv[1])],
-        "bus_stations": sorted(name2id[s] for s in busstops if name2id.get(s) in bus_out),
+        "rails": rails,
         "built": time.strftime("%Y-%m-%d"),
+        "acquired": site_cfg.get("acquired", {}),
+        "contact": {k: site_cfg.get(k) for k in ("contact_label", "contact_url")},
     }
-    site_cfg = json.loads((ROOT / "data" / "site.json").read_text())
-    meta["acquired"] = site_cfg.get("acquired", {})
-    meta["contact"] = {k: site_cfg.get(k) for k in ("contact_label", "contact_url")}
     (DATA / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, separators=(",", ":")))
 
+    shp = ROOT / "data" / "rail_shapes.json"
+    if shp.exists():
+        shutil.copy(shp, DATA / "rail_shapes.json")
     shutil.copy(ROOT / "frontend" / "index.html", SITE / "index.html")
     shutil.copy(ROOT / "frontend" / "engine-static.js", SITE / "engine.js")
     (SITE / ".nojekyll").write_text("")
@@ -147,5 +123,4 @@ def main(limit_rows=None):
 
 
 if __name__ == "__main__":
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else None
-    main(n)
+    main(int(sys.argv[1]) if len(sys.argv) > 1 else None)

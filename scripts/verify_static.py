@@ -12,23 +12,23 @@ SITE = ROOT / "site"
 STATIC_URL = "http://127.0.0.1:8010/"
 SERVER_URL = "http://127.0.0.1:8000"
 
-SAMPLE = [{"station": "荻窪", "bus": "下井草二丁目"}, {"station": "川口"}, {"station": "西船橋"},
-          {"station": "蒲田"}, {"station": "聖蹟桜ヶ丘", "bus": "聖ヶ丘団地"}]
-DEPART, MIN_BARS, MAX_TRAVEL = 19 * 60, 30, 70
+SAMPLE = ["荻窪", "川口", "西船橋", "蒲田", "聖蹟桜ヶ丘"]
+DEPART, MIN_BARS, MAX_TRAVEL = 19 * 60, 30, 90
 
 
 def check_files():
     meta = json.loads((SITE / "data" / "meta.json").read_text())
-    nc = len(meta["cands"])
-    print(f"駅 {len(meta['stations'])} / 候補駅 {nc} / 集合時刻 {meta['presets']} / 作成 {meta['built']}")
+    nc = len(meta["stations"])
+    print(f"駅 {nc} / 路線 {len(meta['rails'])} / 集合時刻 {meta['presets']} / 作成 {meta['built']}")
     assert meta.get("contact", {}).get("contact_url"), "問い合わせ先が meta.json に入っていない"
     assert meta.get("acquired"), "取得日が meta.json に入っていない"
     homes = list((SITE / "data" / "home").glob("*.json"))
     routes = list((SITE / "data" / "route").glob("*.json"))
-    buses = list((SITE / "data" / "bus").glob("*.json"))
-    print(f"home {len(homes)} / route {len(routes)} / bus {len(buses)} / bars "
-          f"{len(list((SITE/'data'/'bars').glob('*.json')))}")
-    assert len(homes) == len(meta["stations"]), "自宅ファイルが足りない"
+    shapes = json.loads((SITE / "data" / "rail_shapes.json").read_text())
+    real = sum(1 for v in shapes.values() for sgm in v if len(sgm) > 2)
+    tot = sum(len(v) for v in shapes.values())
+    print(f"home {len(homes)} / route {len(routes)} / 線路なりの駅間 {real}/{tot}")
+    assert len(homes) == nc, "自宅ファイルが足りない"
     assert len(routes) == nc, "経路ファイルが足りない"
     for f in random.sample(homes, min(30, len(homes))):
         d = json.loads(f.read_text())
@@ -41,15 +41,7 @@ def check_files():
 
 
 def server_top():
-    people = []
-    for p in SAMPLE:
-        o = {"station": p["station"]}
-        if "bus" in p:
-            st = urllib.request.urlopen(
-                f"{SERVER_URL}/api/busstops?station={urllib.parse.quote(p['station'])}").read()
-            b = [x for x in json.loads(st) if x["stop"] == p["bus"]][0]
-            o["bus"] = b
-        people.append(o)
+    people = [{"station": s} for s in SAMPLE]
     body = json.dumps({"people": people, "depart": DEPART,
                        "min_bars": MIN_BARS, "max_travel": MAX_TRAVEL}).encode()
     req = urllib.request.Request(f"{SERVER_URL}/api/search", data=body)
@@ -67,15 +59,15 @@ async def static_top():
         pg.on("console", lambda m: errs.append(m.text) if m.type == "error" else None)
         await pg.goto(STATIC_URL, wait_until="networkidle")
         await pg.click("#sample")
-        await pg.wait_for_timeout(2500)
+        await pg.wait_for_timeout(1200)
         await pg.click("#go")
         await pg.wait_for_selector(".cand", timeout=60000)
         await pg.wait_for_timeout(5000)
         rows = await pg.evaluate("() => RESULT.candidates.map(c => [c.name, c.min_limit, c.min_stay])")
         await pg.screenshot(path="docs/20-static.png")
-        await pg.locator(".cand").nth(0).click()
+        await pg.evaluate("() => { MAP.easeTo({center:[139.76,35.70],zoom:12.2,duration:0}); return null }")
         await pg.wait_for_timeout(5000)
-        await pg.screenshot(path="docs/21-static-detail.png")
+        await pg.locator("#mapwrap").screenshot(path="docs/21-static-zoom.png")
         print("console errors:", errs[:5] or "なし")
         await b.close()
         return [tuple(r) for r in rows]

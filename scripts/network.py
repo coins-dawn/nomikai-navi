@@ -89,9 +89,15 @@ class Network:
                             self.foot[j].append((i, cost))
 
         # --- 列車を (ノード列, 着時刻列, 発時刻列) に変換 ---
-        railways = {r["owl:sameAs"]: r.get("dc:title") or r["owl:sameAs"].split(".")[-1]
-                    for r in json.loads((RAW / "railways.json").read_text())}
-        self.trips, self.trip_line = [], []
+        rw = json.loads((RAW / "railways.json").read_text())
+        self.railways = [r["owl:sameAs"] for r in rw]
+        self.railway_title = {r["owl:sameAs"]: r.get("dc:title") or r["owl:sameAs"].split(".")[-1]
+                              for r in rw}
+        self.railway_color = {r["owl:sameAs"]: r.get("odpt:color") for r in rw}
+        self.railway_order = {r["owl:sameAs"]: [o["odpt:station"] for o in r.get("odpt:stationOrder", [])]
+                              for r in rw}
+        rwidx = {r: i for i, r in enumerate(self.railways)}
+        self.trips, self.trip_line, self.trip_rw = [], [], []
         by_node = defaultdict(list)     # ノード -> [(trip_idx, 停車位置)]
         for tt in json.loads((RAW / "train_timetables.json").read_text()):
             seq = []
@@ -114,7 +120,8 @@ class Network:
                 continue
             idx = len(self.trips)
             self.trips.append(seq)
-            self.trip_line.append(railways.get(tt["odpt:railway"], ""))
+            self.trip_line.append(self.railway_title.get(tt["odpt:railway"], ""))
+            self.trip_rw.append(rwidx.get(tt["odpt:railway"], -1))
             for pos, (nid, _, _) in enumerate(seq):
                 by_node[nid].append((idx, pos))
         self.by_node = by_node
@@ -224,14 +231,14 @@ class Network:
             if p is None:
                 return None
             if p[0] == "w":
-                legs.append({"kind": "walk", "line": "徒歩", "nodes": [cur, p[1]]})
+                legs.append({"kind": "walk", "line": "徒歩", "rw": -1, "nodes": [cur, p[1]]})
                 cur = p[1]
             else:
                 _, ti, b, k = p
                 seq = self.trips[ti]
                 if seq[b][0] != cur or seq[b][2] < t:
                     return None            # 親が今の時刻と合わない
-                legs.append({"kind": "train", "line": self.trip_line[ti],
+                legs.append({"kind": "train", "line": self.trip_line[ti], "rw": self.trip_rw[ti],
                              "nodes": [n for n, _, _ in seq[b:k + 1]],
                              "dep": seq[b][2], "arr": seq[k][1]})
                 t = seq[k][1] + TRANSFER_MIN

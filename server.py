@@ -60,20 +60,12 @@ def detail(payload):
     people, routes = payload["people"], []
     for p in people:
         home = NAME2ID.get(p["station"])
-        bus = p.get("bus")
-        lim = limits_for(home, bus["last"] if bus else None)[node]
+        lim = limits_for(home, None)[node]
         j = NET.journey(node, lim, home) if lim > -10**6 else None
         legs = j["legs"] if j else []
-        if j and bus and bus.get("line"):
-            legs = legs + [{"kind": "bus", "line": f"バス {bus['stop']} 行",
-                            "stops": [{"name": p["station"] + "駅", "lat": bus["line"][0][0],
-                                       "lon": bus["line"][0][1], "time": fmt(bus["last"])},
-                                      {"name": bus["stop"], "lat": bus["line"][-1][0],
-                                       "lon": bus["line"][-1][1], "time": fmt(bus["last"] + bus["ride"])}],
-                            "shape": bus["line"]}]
         routes.append({
             "name": p.get("name") or p["station"],
-            "home": p["station"], "bus": bus["stop"] if bus else None,
+            "home": p["station"], "bus": None,
             "limit": lim, "limit_s": fmt(lim),
             "home_lat": NET.node_pos[home][0], "home_lon": NET.node_pos[home][1],
             "legs": legs,
@@ -97,13 +89,8 @@ def search(payload):
             raise ValueError(f"知らない駅です: {p['station']}")
         ids.append(nid)
         arrs.append(arrivals_for(nid, depart))
-        bus = p.get("bus")
-        if bus:
-            lims.append(limits_for(nid, bus["last"]))
-            labels.append(f"{p['station']}駅 →バス {bus['stop']}（最終 {fmt(bus['last'])}）")
-        else:
-            lims.append(limits_for(nid, None))
-            labels.append(f"{p['station']}駅")
+        lims.append(limits_for(nid, None))
+        labels.append(f"{p['station']}駅")
 
     rows = []
     for n in NODES:
@@ -116,6 +103,7 @@ def search(payload):
         if min(stay) <= 0:
             continue
         rows.append({
+            "id": n["id"],
             "name": n["name"], "bars": n["bars"], "median_m": n["median_m"], "lines": n["lines"],
             "lat": n["lat"], "lon": n["lon"],
             "times": times, "limits": limits, "stay": stay,
@@ -126,13 +114,15 @@ def search(payload):
 
     ok = [r for r in rows if r["bars"] >= min_bars and r["max"] <= max_travel]
     ok.sort(key=lambda r: -r["min_stay"])
+    ok = ok[:5]
     # 比較用: 所要時間だけで選んだ駅（飲み屋も終電も見ない）
     by_time = min(rows, key=lambda r: r["sum"]) if rows else None
     return {
         "people": [{"name": p.get("name") or p["station"], "where": labels[i]}
                    for i, p in enumerate(people)],
         "depart": depart,
-        "candidates": ok[:5],
+        "candidates": ok,
+        "all": rows,
         "by_time": by_time,
         "n_all": len(rows), "n_ok": len(ok),
     }
@@ -160,6 +150,22 @@ class Handler(SimpleHTTPRequestHandler):
                 "stations": [{"n": x["name"], "b": x["bars"], "l": x["lines"]} for x in NODES],
                 "bus_stations": sorted(BUSSTOPS.keys()),
             })
+        if u.path == "/api/geo":
+            rails = []
+            for rid in NET.railways:
+                order, seen = [], set()
+                for sid in NET.railway_order.get(rid, []):
+                    nid = NET.sta2node.get(sid)
+                    if nid is not None and nid not in seen:
+                        seen.add(nid)
+                        order.append(nid)
+                rails.append({"t": NET.railway_title.get(rid, ""),
+                              "c": NET.railway_color.get(rid), "o": order})
+            geo = [{"id": n["id"], "n": n["name"], "lat": n["lat"], "lon": n["lon"],
+                    "b": n["bars"], "m": n["median_m"], "l": n["lines"]} for n in NODES]
+            shapes = json.loads((ROOT / "data" / "rail_shapes.json").read_text()) \
+                if (ROOT / "data" / "rail_shapes.json").exists() else None
+            return self._json({"geo": geo, "rails": rails, "shapes": shapes})
         if u.path == "/api/busstops":
             q = urllib.parse.parse_qs(u.query).get("station", [""])[0]
             return self._json(BUSSTOPS.get(q, []))

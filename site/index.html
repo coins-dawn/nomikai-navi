@@ -6,35 +6,34 @@
 <title>終電ファースト飲み会ナビ</title>
 <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <style>
+/* 夜の居酒屋のトーンで固定する（明るいモードは用意しない） */
 :root{
-  --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2b313d;
-  --fg:#e8ecf3; --muted:#9aa4b5; --accent:#ffb037; --accent2:#4fd1a5; --warn:#ff6b6b;
-}
-@media (prefers-color-scheme: light){
-  :root:not([data-theme="dark"]){
-    --bg:#f6f7f9; --panel:#fff; --panel2:#f0f2f6; --line:#dde2ea;
-    --fg:#171a21; --muted:#5d6675; --accent:#c97a06; --accent2:#0f9b74; --warn:#d23b3b;
-  }
+  --bg:#0d0b11; --panel:#17141d; --panel2:#211d29; --line:#332d3f;
+  --fg:#f2edf7; --muted:#9d94ad; --accent:#ffb43c; --accent2:#58e6b0; --warn:#ff5f8a;
+  --gold:#ffc24a;
+  color-scheme:dark;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);overflow:hidden;
   font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",Meiryo,sans-serif;line-height:1.55}
-header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
-h1{margin:0;font-size:17px}
-h1 span{color:var(--accent)}
+header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+  background:linear-gradient(180deg,#1a1520,var(--bg))}
+h1{margin:0;font-size:17px;letter-spacing:.01em;display:flex;align-items:center;gap:7px}
+.beer{filter:drop-shadow(0 0 7px rgba(255,180,60,.6))}
+h1 span{color:var(--accent);text-shadow:0 0 14px rgba(255,180,60,.55)}
 .sub{color:var(--muted);font-size:12px}
 .app{display:grid;grid-template-columns:330px 1fr;height:calc(100vh - 50px)}
-.app.has-result{grid-template-columns:330px 380px 1fr}
-#result{display:none}
+.app.has-result{grid-template-columns:330px 1fr 380px}
+#result{display:none;border-right:none;border-left:1px solid var(--line)}
 .app.has-result #result{display:block}
 .pane{overflow-y:auto;border-right:1px solid var(--line);padding:12px}
 .pane h2{margin:0 0 8px;font-size:12px;color:var(--muted);letter-spacing:.05em}
 #map{width:100%;height:100%}
-@media(max-width:1000px){
+@media(max-width:1100px){
   body{overflow:auto}
-  .app{grid-template-columns:1fr;height:auto}
-  .pane{border-right:none;border-bottom:1px solid var(--line);max-height:none}
+  .app,.app.has-result{grid-template-columns:1fr;height:auto}
+  .pane{border-right:none;border-left:none;border-bottom:1px solid var(--line);max-height:none}
   #mapwrap{height:60vh}
 }
 .person{display:grid;grid-template-columns:14px 1fr auto;gap:6px;align-items:center;
@@ -48,20 +47,18 @@ input,select,button{font:inherit;color:var(--fg);background:var(--bg);border:1px
   border-radius:7px;padding:6px 8px;max-width:100%}
 input[type=range]{padding:0;border:none;background:none;width:100%}
 button{cursor:pointer}
-button.primary{background:var(--accent);color:#1a1200;border:none;font-weight:700;padding:10px;width:100%;border-radius:9px}
+button.primary{background:linear-gradient(180deg,#ffc256,#f09a1e);color:#2a1a00;border:none;font-weight:700;padding:10px;width:100%;border-radius:9px;
+  box-shadow:0 0 18px rgba(255,180,60,.25)}
 button.ghost{background:none;border:1px dashed var(--line);color:var(--muted);width:100%;padding:7px}
 .row{display:flex;gap:8px;align-items:center;margin:8px 0}
 .row label{font-size:12px;color:var(--muted);min-width:82px}
-.bus{grid-column:1/-1;display:none}
-.bus.on{display:block}
-.bus select{width:100%}
 .tag{font-size:11px;color:var(--muted)}
 .banner{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--accent);
   border-radius:9px;padding:10px 12px;margin-bottom:10px;font-size:13px}
 .banner b{color:var(--accent)}
 .cand{display:grid;grid-template-columns:24px 1fr auto;gap:9px;align-items:center;background:var(--panel);
   border:1px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;margin-bottom:7px}
-.cand:hover{border-color:var(--accent)}
+.cand:hover{border-color:var(--accent);box-shadow:0 0 12px rgba(255,180,60,.12)}
 .cand.sel{border-color:var(--accent);background:var(--panel2)}
 .rank{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--panel2);
   color:var(--muted);font-size:11px;font-weight:700}
@@ -69,7 +66,7 @@ button.ghost{background:none;border:1px dashed var(--line);color:var(--muted);wi
 .nm{font-size:15px;font-weight:700}
 .meta{font-size:11px;color:var(--muted)}
 .stay{text-align:right}
-.stay b{font-size:17px;color:var(--accent2);white-space:nowrap}
+.stay b{font-size:17px;color:var(--accent2);white-space:nowrap;text-shadow:0 0 10px rgba(88,230,176,.35)}
 .stay div{font-size:10px;color:var(--muted)}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th,td{text-align:left;padding:4px 5px;border-bottom:1px solid var(--line)}
@@ -81,8 +78,12 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 .pill.hot{border-color:var(--warn);color:var(--warn)}
 .empty{color:var(--muted);font-size:12px;padding:16px;text-align:center}
 .legend{position:absolute;left:10px;bottom:24px;background:var(--panel);border:1px solid var(--line);
-  border-radius:9px;padding:9px 11px;font-size:11px;z-index:2;max-width:250px}
-.legend div{display:flex;align-items:center;gap:6px;margin:3px 0}
+  border-radius:9px;padding:8px 10px;font-size:10.5px;line-height:1.45;z-index:2;max-width:226px}
+.legend h3{margin:0 0 5px;font-size:11px;color:var(--muted);font-weight:600}
+.legend hr{border:none;border-top:1px solid var(--line);margin:7px 0}
+.sw{width:10px;height:10px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 .5px rgba(0,0,0,.35);flex:0 0 auto}
+.legend .lrow{display:flex;align-items:center;gap:5px;margin:1.5px 0}
+.legend p{margin:4px 0 0;line-height:1.5}
 .legend s{width:18px;height:3px;border-radius:2px;display:inline-block}
 .mk{width:11px;height:11px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
 .mk.sta{width:17px;height:17px;background:#fff;border:4px solid var(--accent);box-shadow:0 0 0 1px rgba(0,0,0,.5)}
@@ -94,7 +95,15 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 </head>
 <body>
 <header>
-  <h1>終電ファースト<span>飲み会ナビ</span></h1>
+  <h1>終電ファースト<span>飲み会ナビ</span>
+    <svg class="beer" viewBox="0 0 64 64" width="26" height="26" aria-hidden="true">
+      <g stroke="#7a3d00" stroke-width="3.4" stroke-linejoin="round">
+        <path d="M44 26h7a6 6 0 0 1 0 12h-7z" fill="#ffd9a0"/>
+        <path d="M15 22h30v28a6 6 0 0 1-6 6H21a6 6 0 0 1-6-6z" fill="#ffb43c"/>
+        <path d="M15 22c0-6 5-9 8-9 2-4 9-5 12-2 5-2 10 1 10 6 0 3-2 5-5 5z" fill="#fff8ee"/>
+      </g>
+      <path d="M22 30h5v18h-5z" fill="#ffe3a8" opacity=".9"/>
+    </svg></h1>
   <div class="sub">「早く帰らないといけない人」が<b>いちばん長くいられる駅</b>を探し、<b>帰りの経路</b>まで地図に描きます。</div>
 </header>
 
@@ -108,18 +117,18 @@ th{color:var(--muted);font-weight:600;font-size:10px}
     </div>
     <div id="people"></div>
     <button class="ghost" id="add">＋ 参加者を追加</button>
-    <div class="row"><label>集合時刻</label><select id="depart"></select></div>
-    <div class="row"><label>飲み屋 最低</label><input type="range" id="minbars" min="10" max="150" step="5" value="30">
-      <span class="tag" id="minbarsv"></span></div>
-    <div class="row"><label>片道の上限</label><input type="range" id="maxtravel" min="20" max="120" step="5" value="70">
-      <span class="tag" id="maxtravelv"></span></div>
     <button class="primary" id="go">集合駅を探す</button>
     <div class="tag" id="status" style="margin-top:8px"></div>
     <h2 style="margin-top:16px">使っているオープンデータ</h2>
     <div class="tag" id="credits"></div>
   </div>
 
-  <!-- 2. 計算結果 -->
+  <!-- 2. 地図 -->
+  <div id="mapwrap" style="position:relative">
+    <div id="map"></div>
+    <div class="legend" id="legend" style="display:none"></div>
+  </div>
+  <!-- 3. 計算結果（右端） -->
   <div class="pane" id="result">
     <h2>計算結果</h2>
     <div id="banner"></div>
@@ -127,11 +136,6 @@ th{color:var(--muted);font-weight:600;font-size:10px}
     <div id="detail"></div>
   </div>
 
-  <!-- 3. 地図 -->
-  <div id="mapwrap" style="position:relative">
-    <div id="map"></div>
-    <div class="legend" id="legend" style="display:none"></div>
-  </div>
 </div>
 
 <datalist id="stations"></datalist>
@@ -142,8 +146,17 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const fmt=v=>`${String(Math.floor(v/60)%24).padStart(2,"0")}:${String(v%60).padStart(2,"0")}`;
 const hm=s=>{const[a,b]=s.split(":");return +a*60+ +b};
 const COLORS=["#4fd1a5","#59a5f5","#c48cf0","#f58fb0","#8fd14f","#f0b429","#6fd6d6","#d98e5a"];
-let META=null,RESULT=null,SEL=0,MAP=null,DETAIL=null,MARKERS=[];
-const SAMPLE=[["荻窪","下井草二丁目"],["川口",null],["西船橋",null],["蒲田",null],["聖蹟桜ヶ丘","聖ヶ丘団地"]];
+/* 終電の遅さを表す逐次スケール。遅いほど蛍光ピンク（2026-10-07 ユーザー指定）。
+   明度が単調に並び、隣どうしの差も確保してある。地の色を沈めたうえで検証スクリプトを通した
+   （明度単調・隣接差 0.06 以上・暗い端も地に対して 2.2:1）。色相はピンク〜紫にまたがる。*/
+const RAMP=["#6f3cc0","#bb2ab6","#f03aa8","#ff6ec7","#ffa6e4"];
+let DEPART=19*60;      // 集合時刻は 19:00 に固定（事前計算の都合と、画面を増やさないため）
+const BARS_OK=30;      // これだけ飲み屋があれば「飲み会ができる駅」として金のフチを付ける
+const MAX_TRAVEL=90;   // 片道がこれを超える駅はおすすめに出さない（会場が遠くに引きずられるのを防ぐ）
+const NODATA="#8a8f99";
+const MAPDIM="#0d0b11";
+let META=null,RESULT=null,SEL=null,MAP=null,DETAIL=null,MARKERS=[],HOVER=null,BUCKETS=[],GEO={},FIT=false;
+const SAMPLE=["荻窪","川口","西船橋","蒲田","聖蹟桜ヶ丘"];
 
 /* ---------- 地図 ---------- */
 function initMap(){
@@ -152,6 +165,52 @@ function initMap(){
     attributionControl:{compact:true}});
   MAP.addControl(new maplibregl.NavigationControl({showCompass:false}),"top-right");
   MAP.on("load",()=>{
+    // 下地の文字を全部消す（駅の色と経路を読みたいので、地名・道路名は邪魔になる）
+    MAP.getStyle().layers.forEach(l=>{
+      if(l.type==="symbol") MAP.setLayoutProperty(l.id,"visibility","none");
+    });
+    // 蛍光色を乗せるため地の色を沈める
+    MAP.addLayer({id:"dim",type:"background",
+      paint:{"background-color":MAPDIM,"background-opacity":.9}});
+    // 路線網（公式のラインカラー。あくまで背景なので細く薄く）
+    MAP.addSource("rails",{type:"geojson",data:empty()});
+    MAP.addLayer({id:"rail-line",type:"line",source:"rails",
+      paint:{"line-color":["coalesce",["get","color"],"#7d858f"],"line-opacity":.75,
+        "line-width":["interpolate",["linear"],["zoom"],8,.9,11,1.8,15,3.4]},
+      layout:{"line-cap":"round","line-join":"round"}});
+    // 全駅。計算後は「いちばん早い人の終電」で色を塗る
+    MAP.addSource("stations",{type:"geojson",data:empty()});
+    // 飲み屋が一定数ある駅は金のフチで囲む（飲み会ができる駅の目印）
+    MAP.addLayer({id:"st-gold",type:"circle",source:"stations",
+      filter:[">=",["get","bars"],BARS_OK],
+      paint:{"circle-color":"rgba(0,0,0,0)",
+        "circle-radius":["interpolate",["linear"],["zoom"],8,5.2,11,8,15,13.5],
+        "circle-stroke-color":"#ffc24a",
+        "circle-stroke-width":["interpolate",["linear"],["zoom"],8,1.1,11,1.8,15,2.6],
+        "circle-stroke-opacity":.95}});
+    MAP.addLayer({id:"st-dot",type:"circle",source:"stations",
+      paint:{"circle-color":["coalesce",["get","color"],"#b8b8b4"],
+        "circle-opacity":["case",["has","bucket"],1,.75],
+        "circle-radius":["interpolate",["linear"],["zoom"],
+          8,["case",["has","bucket"],3.4,1.8],11,["case",["has","bucket"],5.6,2.6],15,["case",["has","bucket"],10,4.5]],
+        "circle-stroke-color":"#17141d",
+        "circle-stroke-width":["interpolate",["linear"],["zoom"],8,.6,11,1.1,15,1.8]}});
+    MAP.addLayer({id:"st-sel",type:"circle",source:"stations",filter:["==",["get","sel"],true],
+      paint:{"circle-color":"rgba(0,0,0,0)","circle-radius":["interpolate",["linear"],["zoom"],8,6,11,9,15,14],
+        "circle-stroke-color":"#ffb037","circle-stroke-width":3}});
+    MAP.on("click","st-dot",e=>selectStation(e.features[0].properties.name));
+    MAP.on("mouseenter","st-dot",e=>{MAP.getCanvas().style.cursor="pointer"});
+    MAP.on("mouseleave","st-dot",()=>{MAP.getCanvas().style.cursor="";if(HOVER){HOVER.remove();HOVER=null}});
+    MAP.on("mousemove","st-dot",e=>{
+      const p=e.features[0].properties;
+      if(HOVER) HOVER.remove();
+      HOVER=new maplibregl.Popup({closeButton:false,closeOnClick:false,offset:8})
+        .setLngLat(e.lngLat)
+        .setHTML(p.limit?`<b>${p.name}</b><br>いちばん早い人の終電 ${p.limit}<br>
+          <span style="opacity:.7">飲み屋 ${p.bars}軒・滞在 ${p.stay}分</span>`
+                        :`<b>${p.name}</b><br><span style="opacity:.7">全員が帰れる組み合わせなし</span>`)
+        .addTo(MAP);
+    });
     MAP.addSource("routes",{type:"geojson",data:empty()});
     MAP.addLayer({id:"route-case",type:"line",source:"routes",
       paint:{"line-color":"#000","line-opacity":.22,"line-width":["case",["get","tight"],10,5]},
@@ -168,43 +227,9 @@ function initMap(){
       filter:["all",["get","tight"],["!=",["get","kind"],"walk"]],
       paint:{"line-color":"#ffb037","line-width":6},
       layout:{"line-cap":"round","line-join":"round"}});
-    MAP.addSource("bars",{type:"geojson",data:empty()});
-    // 引いたときは面（かたまり）で、寄ったらジョッキの絵で見せる
-    MAP.addLayer({id:"bars-blob",type:"circle",source:"bars",maxzoom:13.5,
-      paint:{"circle-color":"#ff7a18","circle-opacity":.45,"circle-blur":.2,
-        "circle-radius":["interpolate",["linear"],["zoom"],8,4.5,10,7,12,8,13.5,8]}});
-    addBeer().then(()=>{
-      MAP.addLayer({id:"bars-dot",type:"symbol",source:"bars",minzoom:12.5,
-        layout:{"icon-image":"beer","icon-padding":0,"icon-allow-overlap":false,
-          "icon-size":["interpolate",["linear"],["zoom"],12.5,.45,15,.7,17,.95]}});
-    });
-    MAP.on("click","bars-dot",e=>{
-      const p=e.features[0].properties;
-      new maplibregl.Popup({closeButton:false}).setLngLat(e.lngLat)
-        .setHTML(`<b>${p.name||"（名前なし）"}</b><br><span style="opacity:.7">${p.kind}</span>`).addTo(MAP);
-    });
-    MAP.on("mouseenter","bars-dot",()=>MAP.getCanvas().style.cursor="pointer");
-    MAP.on("mouseleave","bars-dot",()=>MAP.getCanvas().style.cursor="");
-    MAP.on("click","bars-blob",e=>MAP.easeTo({center:e.lngLat,zoom:14}));
   });
 }
 const empty=()=>({type:"FeatureCollection",features:[]});
-// ビールジョッキの絵を作って地図のアイコンに登録する
-function addBeer(){
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-    <g stroke="#7a3d00" stroke-width="3.2" stroke-linejoin="round">
-      <path d="M44 26h7a6 6 0 0 1 0 12h-7z" fill="#ffd9a0"/>
-      <path d="M15 22h30v28a6 6 0 0 1-6 6H21a6 6 0 0 1-6-6z" fill="#f5a623"/>
-      <path d="M15 22c0-6 5-9 8-9 2-4 9-5 12-2 5-2 10 1 10 6 0 3-2 5-5 5z" fill="#fff8ee"/>
-    </g>
-    <path d="M22 30h5v18h-5z" fill="#ffd98a" opacity=".85"/>
-  </svg>`;
-  return new Promise(res=>{
-    const img=new Image(64,64);
-    img.onload=()=>{if(!MAP.hasImage("beer")) MAP.addImage("beer",img); res()};
-    img.src="data:image/svg+xml;base64,"+btoa(unescape(encodeURIComponent(svg)));
-  });
-}
 function clearMarkers(){MARKERS.forEach(m=>m.remove());MARKERS=[]}
 function marker(lat,lon,cls,html){
   const el=document.createElement("div"); el.className="mk "+cls;
@@ -215,13 +240,11 @@ function marker(lat,lon,cls,html){
 
 function drawDetail(d){
   DETAIL=d;
-  MAP.getSource("bars").setData({type:"FeatureCollection",features:d.bars.map(b=>
-    ({type:"Feature",geometry:{type:"Point",coordinates:[b.lon,b.lat]},properties:{name:b.name,kind:b.kind}}))});
   const feats=[];
   d.routes.forEach((r,i)=>{
     const color=COLORS[i%COLORS.length], tight=(i===d.tight);
     r.legs.forEach(l=>{
-      const co=(l.shape||l.stops.map(s=>[s.lat,s.lon])).map(p=>[p[1],p[0]]);
+      const co=(l.shape||legShape(l.rw,l.a,l.b)||l.stops.map(s=>[s.lat,s.lon])).map(p=>[p[1],p[0]]);
       if(co.length<2) return;
       feats.push({type:"Feature",geometry:{type:"LineString",coordinates:co},
         properties:{color:tight?"#ffb037":color,tight,kind:l.kind,who:r.name,line:l.line}});
@@ -244,24 +267,94 @@ function drawDetail(d){
         .setHTML(`<b>${r.name}</b> の自宅<br>${r.bus?r.bus+"（バス）":r.home+"駅"}<br>帰宅リミット ${r.limit_s}`));
     mk.addTo(MAP); MARKERS.push(mk);
     b.extend([lon,lat]);
-    r.legs.forEach(l=>(l.shape||l.stops.map(s=>[s.lat,s.lon])).forEach(p=>b.extend([p[1],p[0]])));
+    r.legs.forEach(l=>(l.shape||legShape(l.rw,l.a,l.b)||l.stops.map(s=>[s.lat,s.lon])).forEach(p=>b.extend([p[1],p[0]])));
   });
-  MAP.fitBounds(b,{padding:{top:50,bottom:50,left:50,right:50},duration:700,maxZoom:13});
-  $("#legend").style.display="";
-  $("#legend").innerHTML=`<div><span class="mk sta"></span> 集合駅 ${d.station}</div>
-    <div><span class="mk bar" style="background:#ff7a18"></span> 飲み屋 ${d.bars.length}軒（500m以内・寄るとジョッキの印。クリックで店名）</div>
-    ${d.routes.map((r,i)=>`<div><s style="background:${i===d.tight?"#ffb037":COLORS[i%COLORS.length]};
+  if(FIT){MAP.fitBounds(b,{padding:{top:60,bottom:60,left:60,right:60},duration:700,maxZoom:13});FIT=false}
+  drawLegend(d);
+}
+
+/* 凡例: 上段＝駅の色の意味（逐次スケール）／下段＝選んだ駅の中身 */
+function drawLegend(d){
+  const L=$("#legend"); L.style.display="";
+  const scale=BUCKETS.length?`<h3>駅の色 ＝ いちばん早い人の終電</h3>
+    ${BUCKETS.map((b,i)=>`<div class="lrow"><span class="sw" style="background:${RAMP[i]}"></span>
+      ${fmt(b.lo)}${b.lo===b.hi?"":"〜"+fmt(b.hi)}<span class="tag" style="font-size:10px"> ${b.n}</span></div>`).reverse().join("")}
+    <div class="lrow"><span class="sw" style="background:${NODATA};opacity:.6"></span>
+      <span class="tag" style="font-size:10px">帰れない</span></div>`:"";
+  const sel=d?`${scale?"<hr>":""}<div class="lrow"><span class="mk sta"></span> 集合駅 ${d.station}</div>
+    ${d.routes.map((r,i)=>`<div class="lrow"><s style="background:${i===d.tight?"#ffb037":COLORS[i%COLORS.length]};
       height:${i===d.tight?5:3}px"></s> ${r.name} ${r.limit_s}${i===d.tight?" ← 一番早い":""}</div>`).join("")}
-    <div class="tag" style="margin-top:4px">点線は徒歩。駅間は直線で結んでいます</div>`;
+    <p class="tag" style="font-size:10px">点線は徒歩</p>`:"";
+  L.innerHTML=(scale+sel)||`<h3>関東の鉄道</h3>
+    <p class="tag">参加者を入れて「集合駅を探す」を押すと、駅が
+    <b style="color:var(--fg)">いちばん早い人の終電</b>で色分けされます。
+    駅をクリックすると、その駅に集まった場合の各人の帰り方が出ます。</p>`;
+}
+
+/* 路線網と全駅を敷く（検索前から出す） */
+let ONLINE=new Set();
+function drawNetwork(){
+  META.rails.forEach(r=>r.o.forEach(n=>ONLINE.add(n)));
+  const fs=[];
+  META.rails.forEach((r,ri)=>{
+    const segs=META.shapes&&META.shapes[ri];
+    for(let k=0;k<r.o.length-1;k++){
+      const co=segs?segs[k]:[[GEO[r.o[k]].lat,GEO[r.o[k]].lon],[GEO[r.o[k+1]].lat,GEO[r.o[k+1]].lon]];
+      if(!co||co.length<2) continue;
+      fs.push({type:"Feature",properties:{color:r.c,name:r.t},
+        geometry:{type:"LineString",coordinates:co.map(p=>[p[1],p[0]])}});
+    }
+  });
+  MAP.getSource("rails").setData({type:"FeatureCollection",features:fs});
+  paintStations(null);
+}
+
+/* 区間（路線・乗る駅・降りる駅）を実際の線路の形に直す */
+function legShape(rw,a,b){
+  if(rw==null||rw<0||!META.shapes) return null;
+  const rail=META.rails[rw], segs=META.shapes[rw];
+  if(!rail||!segs) return null;
+  const i=rail.o.indexOf(a), j=rail.o.indexOf(b);
+  if(i<0||j<0||i===j) return null;
+  let out=[];
+  if(i<j) for(let k=i;k<j;k++) out=out.concat(segs[k]||[]);
+  else for(let k=i-1;k>=j;k--) out=out.concat((segs[k]||[]).slice().reverse());
+  return out.length>1?out:null;
+}
+
+/* 駅を「いちばん早い人の終電」で塗り分ける。
+   絶対時刻で切ると全部同じ色になりうるので、その日の分布を 5 等分する */
+function paintStations(res){
+  const byId={};
+  BUCKETS=[];
+  if(res&&res.all.length){
+    const v=res.all.map(r=>r.min_limit).sort((a,b)=>a-b);
+    const q=i=>v[Math.min(v.length-1,Math.floor(i*v.length/5))];
+    const edges=[q(0),q(1),q(2),q(3),q(4),v[v.length-1]+1];
+    const idx=x=>{for(let i=4;i>=0;i--) if(x>=edges[i]) return i; return 0};
+    BUCKETS=[0,1,2,3,4].map(i=>({lo:edges[i],hi:edges[i+1]-1,n:0}));
+    res.all.forEach(r=>{const i=idx(r.min_limit);BUCKETS[i].n++;byId[r.id]={b:i,r}});
+    BUCKETS.forEach(b=>{if(b.hi<b.lo)b.hi=b.lo});
+  }
+  MAP.getSource("stations").setData({type:"FeatureCollection",features:META.geo.filter(s=>ONLINE.has(s.id)).map(s=>{
+    const e=byId[s.id];
+    const p={name:s.n,bars:s.b,sel:SEL===s.n};
+    if(e){p.bucket=e.b;p.color=RAMP[e.b];p.limit=fmt(e.r.min_limit);p.stay=e.r.min_stay}
+    return {type:"Feature",properties:p,geometry:{type:"Point",coordinates:[s.lon,s.lat]}};
+  })});
 }
 
 /* ---------- 入力 ---------- */
 async function boot(){
   initMap();
   META=await API.meta();
-  $("#stations").innerHTML=META.stations.map(s=>`<option value="${s.n}">`).join("");
-  $("#depart").innerHTML=META.presets.map(v=>`<option value="${v}"${v===19*60?" selected":""}>${fmt(v)}</option>`).join("");
-  bindRange("minbars","軒"); bindRange("maxtravel","分");
+  GEO=Object.fromEntries(META.geo.map(s=>[s.id,s]));
+  const ready=()=>MAP.isStyleLoaded()&&MAP.getSource("rails");
+  await new Promise(r=>{const t=setInterval(()=>{if(ready()){clearInterval(t);r()}},120)});
+  drawNetwork(); drawLegend(null);
+  const on=new Set(); META.rails.forEach(r=>r.o.forEach(n=>on.add(n)));
+  $("#stations").innerHTML=META.geo.filter(s=>on.has(s.id)).map(s=>`<option value="${s.n}">`).join("");
+  DEPART=META.presets.includes(19*60)?19*60:META.presets[0];
   credits();
 }
 // 開発者ガイドライン 3.1 が求める 3 点（提供元・無保証・問い合わせ先）と、静的データの取得日
@@ -269,66 +362,34 @@ function credits(){
   const a=META.acquired||{}, c=META.contact||{};
   $("#credits").innerHTML=`
     このアプリは<b>公共交通オープンデータセンター</b>で提供されるデータを利用しています
-    （鉄道10事業者65路線の列車時刻表・駅情報、GTFS-JP の関東バス・京王バス・都営バス）。
+    （鉄道10事業者65路線の列車時刻表・駅情報・ラインカラー）。
     データの<b>正確性・完全性が保証されたものではありません</b>。実際の運行とは異なる場合があります。
     <b>交通事業者への直接のお問い合わせはご遠慮ください。</b>
     ${c.contact_url?`お問い合わせは <a href="${c.contact_url}">${c.contact_label}</a> へ。`:""}
-    <br>静的データの取得日: 鉄道 ${a.odpt||"-"} / バス ${a.bus_gtfs||"-"} / OpenStreetMap ${a.osm||"-"}
+    <br>静的データの取得日: 鉄道 ${a.odpt||"-"} / OpenStreetMap ${a.osm||"-"}
     （この画面の計算結果は ${META.built||"-"} 時点）。
-    <br>飲み屋の位置は OpenStreetMap（<code>amenity=pub/bar/nightclub</code>、ODbL）。
+    <br>飲み屋の位置と線路の形は OpenStreetMap（ODbL）。
     地図 © OpenFreeMap © OpenMapTiles © OpenStreetMap contributors。`;
 }
-function bindRange(id,unit){const el=$("#"+id),out=$("#"+id+"v");el.oninput=()=>out.textContent=el.value+unit;el.oninput()}
 function addPerson(station=""){
   const d=document.createElement("div"); d.className="person";
   d.innerHTML=`<span class="dot"></span>
     <input type="text" class="st" list="stations" placeholder="自宅の最寄り駅" value="${station}">
-    <button class="del" title="消す">×</button>
-    <label class="tag" style="grid-column:1/-1"><input type="checkbox" class="usebus"> 駅から路線バスに乗り継ぐ</label>
-    <div class="bus"><select class="stop"></select></div>`;
+    <button class="del" title="消す">×</button>`;
   $("#people").appendChild(d);
-  const cb=d.querySelector(".usebus"),box=d.querySelector(".bus"),st=d.querySelector(".st");
-  cb.onchange=async()=>{box.classList.toggle("on",cb.checked); if(cb.checked) await loadStops(d)};
-  st.onchange=()=>{if(cb.checked) loadStops(d)};
   d.querySelector(".del").onclick=()=>{d.remove();recolor()};
   recolor();
   return d;
 }
 function recolor(){$$(".person").forEach((d,i)=>d.querySelector(".dot").style.background=COLORS[i%COLORS.length])}
-async function loadStops(d){
-  const st=d.querySelector(".st").value.trim(), sel=d.querySelector(".stop");
-  const list=await API.busstops(st);
-  if(!list.length){sel.innerHTML=`<option value="">（この駅のバスデータはありません）</option>`;sel.dataset.json="";return}
-  sel.innerHTML=list.map((b,i)=>`<option value="${i}">${b.stop}（最終 ${fmt(b.last)}・${b.ride}分）</option>`).join("");
-  sel.dataset.json=JSON.stringify(list);
-}
 $("#add").onclick=()=>addPerson();
 $("#clear").onclick=()=>{$("#people").innerHTML="";$(".app").classList.remove("has-result")};
-$("#sample").onclick=async()=>{
-  $("#people").innerHTML="";
-  for(const [st,stop] of SAMPLE){
-    const d=addPerson(st);
-    if(stop){
-      d.querySelector(".usebus").checked=true;
-      d.querySelector(".bus").classList.add("on");
-      await loadStops(d);
-      const sel=d.querySelector(".stop");
-      const list=JSON.parse(sel.dataset.json||"[]");
-      const k=list.findIndex(b=>b.stop===stop);
-      if(k>=0) sel.value=k;
-    }
-  }
-};
+$("#sample").onclick=()=>{$("#people").innerHTML="";SAMPLE.forEach(st=>addPerson(st))};
 
 function collect(){
   return $$(".person").map(d=>{
-    const station=d.querySelector(".st").value.trim(); if(!station) return null;
-    const o={station};
-    const sel=d.querySelector(".stop");
-    if(d.querySelector(".usebus").checked&&sel.dataset.json){
-      const b=JSON.parse(sel.dataset.json)[+sel.value]; if(b) o.bus=b;
-    }
-    return o;
+    const station=d.querySelector(".st").value.trim();
+    return station?{station}:null;
   }).filter(Boolean);
 }
 
@@ -336,14 +397,17 @@ $("#go").onclick=async()=>{
   const people=collect();
   if(people.length<2){$("#status").textContent="自宅の最寄り駅を 2 つ以上入れてください。";return}
   $("#status").textContent="計算中…";
-  const j=await API.search({people,depart:+$("#depart").value,
-    min_bars:+$("#minbars").value,max_travel:+$("#maxtravel").value});
+  const j=await API.search({people,depart:DEPART,
+    min_bars:BARS_OK,max_travel:MAX_TRAVEL});
   if(j.error){$("#status").textContent="エラー: "+j.error;return}
   RESULT=j; RESULT._people=people; SEL=0;
   $("#status").textContent=`候補 ${j.n_ok} 駅 / 全員が行ける ${j.n_all} 駅`;
   $(".app").classList.add("has-result");
   MAP.resize();
-  render(); select(0);
+  SEL=null; FIT=true;
+  paintStations(j);
+  render();
+  if(j.candidates.length) selectStation(j.candidates[0].name);
 };
 
 function render(){
@@ -355,26 +419,29 @@ function render(){
     （いちばん早い人の終電 ${fmt(bt.min_limit)}・滞在 ${bt.min_stay}分）。
     この方式だと <b>${best.name}</b>（終電 ${fmt(best.min_limit)}・滞在 ${best.min_stay}分）で
     <b>${best.min_stay-bt.min_stay>=0?"+":""}${best.min_stay-bt.min_stay}分</b> 長くいられます。</div>`;
-  $("#list").innerHTML=c.map((r,i)=>`<div class="cand ${i===SEL?"sel":""}" data-i="${i}">
+  $("#list").innerHTML=c.map((r,i)=>`<div class="cand ${r.name===SEL?"sel":""}" data-n="${r.name}">
       <div class="rank">${i+1}</div>
       <div><div class="nm">${r.name}</div>
         <div class="meta">飲み屋 ${r.bars}軒${r.median_m?`・店まで中央値${r.median_m}m`:""} ・${r.lines}路線
           ・滞在 ${r.min_stay}分</div></div>
       <div class="stay"><b>${fmt(r.min_limit)}</b><div>${j.people[r.tight].name} の終電</div></div></div>`).join("");
-  $$(".cand").forEach(el=>el.onclick=()=>select(+el.dataset.i));
+  $$(".cand").forEach(el=>el.onclick=()=>selectStation(el.dataset.n));
 }
 
-async function select(i){
-  SEL=i; render();
-  const r=RESULT.candidates[i];
-  $("#detail").innerHTML=`<div class="tag" style="padding:8px">${r.name} の経路を計算中…</div>`;
-  const d=await API.detail({people:RESULT._people,station:r.name,depart:RESULT.depart});
+/* 地図の駅をクリックしても、右の一覧から選んでも、ここに来る */
+async function selectStation(name){
+  if(!RESULT) return;
+  const r=RESULT.all.find(x=>x.name===name);
+  if(!r){$("#detail").innerHTML=`<div class="empty">${name} は、全員が帰れる組み合わせがありません。</div>`;return}
+  SEL=name; render(); paintStations(RESULT);
+  $("#detail").innerHTML=`<div class="tag" style="padding:8px">${name} の経路を組み立て中…</div>`;
+  const d=await API.detail({people:RESULT._people,station:name,depart:RESULT.depart});
   if(d.error){$("#detail").innerHTML=`<div class="empty">${d.error}</div>`;return}
-  drawDetail(d); renderDetail(d);
+  drawDetail(d); renderDetail(d,r);
 }
 
-function renderDetail(d){
-  const j=RESULT,r=j.candidates[SEL];
+function renderDetail(d,r){
+  const j=RESULT;
   const endMax=Math.min(...r.limits), endDefault=Math.max(j.depart+60,endMax-30);
   $("#detail").innerHTML=`<h2 style="margin-top:14px">${r.name} に集まったら</h2>
     <div class="row"><label>一次会の終了</label>
