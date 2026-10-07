@@ -52,14 +52,20 @@ python3 scripts/build_static.py 20       # 試し（自宅 20 件だけ。約 1 
 
 ```bash
 git remote add origin git@github.com:<ユーザー名>/nomikai-navi.git
-git push -u origin master
+git push -u origin main
 ```
+
+**ブランチ名は `main` にする。** GitHub が自動で作る `github-pages` 環境には
+「デプロイできるのは `main` だけ」というブランチ制限が付く。`master` で push すると
+ワークフローは走るが **`Branch "master" is not allowed to deploy to github-pages due to
+environment protection rules.`** で落ちる（Pages の Source 設定とは別の話なので紛らわしい）。
+制限は Settings → Environments → github-pages からも変えられるが、`main` に揃えるほうが早い。
 
 GitHub の **Settings → Pages → Build and deployment → Source** を **GitHub Actions** にして、
 `.github/workflows/pages.yml`（このリポジトリに入れてある）が `site/` を配る。
 
 - `site/.nojekyll` を置いてある（Jekyll に処理させない）。
-- 公開 URL は `https://<ユーザー名>.github.io/nomikai-navi/`。
+- 公開 URL は `https://<ユーザー名>.github.io/nomikai-navi/`。実際の公開先は https://coins-dawn.github.io/nomikai-navi/ 。
 - **`site/` も git にコミットする**（Pages は生成物を配るため）。`.gitignore` で除外しないこと。
 
 ## 4. 公開前に必ず確認する
@@ -75,4 +81,11 @@ GitHub の **Settings → Pages → Build and deployment → Source** を **GitH
 ## 5. 更新する
 
 配信データが更新されたら、`scripts/fetch_odpt.py` → `build_bars.py` → `build_index.py` → `build_static.py` の順に流し直し、
-`data/site.json` の `acquired` を直してから push する。
+`data/site.json` の `acquired` を直してから `main` に push する。push すれば自動で再デプロイされる。
+
+画面だけ直したときは `build_static.py` を全部流さなくてよい:
+
+```bash
+cp frontend/index.html site/index.html && cp frontend/engine-static.js site/engine.js
+python3 scripts/verify_static.py --compare   # サーバ版（:8000）と突き合わせる
+```
