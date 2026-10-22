@@ -6,22 +6,22 @@
 <title>終電ファースト飲み会ナビ</title>
 <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <style>
-/* 夜の居酒屋のトーンで固定する（明るいモードは用意しない） */
+/* 白を基調にする（2026-10-22 ユーザー指示。それまでは夜のトーンだった） */
 :root{
-  --bg:#0d0b11; --panel:#17141d; --panel2:#211d29; --line:#332d3f;
-  --fg:#f2edf7; --muted:#9d94ad; --accent:#ffb43c; --accent2:#58e6b0; --warn:#ff5f8a;
-  --gold:#ffc24a;
-  color-scheme:dark;
+  --bg:#ffffff; --panel:#ffffff; --panel2:#f6f5f2; --line:#e4e1da;
+  --fg:#22201c; --muted:#77716a; --accent:#e08600; --accent-ink:#9a5800; --accent2:#0e8f63; --warn:#d6336c;
+  --gold:#d99a00;
+  color-scheme:light;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);overflow:hidden;
   font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",Meiryo,sans-serif;line-height:1.55}
 header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
-  background:linear-gradient(180deg,#1a1520,var(--bg))}
+  background:var(--bg)}
 h1{margin:0;font-size:17px;letter-spacing:.01em;display:flex;align-items:center;gap:7px}
-.beer{filter:drop-shadow(0 0 7px rgba(255,180,60,.6))}
-h1 span{color:var(--accent);text-shadow:0 0 14px rgba(255,180,60,.55)}
+.beer{}
+h1 span{color:var(--accent-ink)}
 .sub{color:var(--muted);font-size:12px}
 .app{display:grid;grid-template-columns:330px 1fr;height:calc(100vh - 50px)}
 .app.has-result{grid-template-columns:330px 1fr 380px}
@@ -43,7 +43,7 @@ h1 span{color:var(--accent);text-shadow:0 0 14px rgba(255,180,60,.55)}
 .person .fields input{width:100%}
 .seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
 .seg button{flex:1;border:none;border-radius:0;background:var(--bg);color:var(--muted);font-size:12px;padding:5px 4px}
-.seg button.on{background:var(--accent);color:#2a1a00;font-weight:700}
+.seg button.on{background:var(--accent);color:#fff;font-weight:700}
 .person.home .of{display:none}
 .person .del{background:none;border:none;color:var(--muted);padding:2px 4px;font-size:15px;line-height:1}
 .person .del:hover{color:var(--warn)}
@@ -51,28 +51,28 @@ h1 span{color:var(--accent);text-shadow:0 0 14px rgba(255,180,60,.55)}
 .sample button{flex:1;font-size:12px;padding:6px}
 input,select,button{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);
   border-radius:7px;padding:6px 8px;max-width:100%}
-input[type=range]{padding:0;border:none;background:none;width:100%}
+input[type=range]{padding:0;border:none;background:none;width:100%;accent-color:var(--accent)}
 button{cursor:pointer}
-button.primary{background:linear-gradient(180deg,#ffc256,#f09a1e);color:#2a1a00;border:none;font-weight:700;padding:10px;width:100%;border-radius:9px;
-  box-shadow:0 0 18px rgba(255,180,60,.25)}
+button.primary{background:var(--accent);color:#fff;border:none;font-weight:700;padding:10px;width:100%;border-radius:9px;
+  box-shadow:0 1px 3px rgba(0,0,0,.15)}
 button.ghost{background:none;border:1px dashed var(--line);color:var(--muted);width:100%;padding:7px}
 .row{display:flex;gap:8px;align-items:center;margin:8px 0}
 .row label{font-size:12px;color:var(--muted);min-width:82px}
 .tag{font-size:11px;color:var(--muted)}
 .banner{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--accent);
   border-radius:9px;padding:10px 12px;margin-bottom:10px;font-size:13px}
-.banner b{color:var(--accent)}
+.banner b{color:var(--accent-ink)}
 .cand{display:grid;grid-template-columns:24px 1fr auto;gap:9px;align-items:center;background:var(--panel);
   border:1px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;margin-bottom:7px}
-.cand:hover{border-color:var(--accent);box-shadow:0 0 12px rgba(255,180,60,.12)}
-.cand.sel{border-color:var(--accent);background:var(--panel2)}
+.cand:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.cand.sel{border-color:var(--accent);background:#fff8ec}
 .rank{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--panel2);
   color:var(--muted);font-size:11px;font-weight:700}
-.cand.sel .rank{background:var(--accent);color:#1a1200}
+.cand.sel .rank{background:var(--accent);color:#fff}
 .nm{font-size:15px;font-weight:700}
 .meta{font-size:11px;color:var(--muted)}
 .stay{text-align:right}
-.stay b{font-size:17px;color:var(--accent2);white-space:nowrap;text-shadow:0 0 10px rgba(88,230,176,.35)}
+.stay b{font-size:17px;color:var(--accent2);white-space:nowrap;}
 .stay div{font-size:10px;color:var(--muted)}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th,td{text-align:left;padding:4px 5px;border-bottom:1px solid var(--line)}
@@ -83,7 +83,7 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 .pill{display:inline-block;font-size:10px;padding:1px 6px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
 .pill.hot{border-color:var(--warn);color:var(--warn)}
 .empty{color:var(--muted);font-size:12px;padding:16px;text-align:center}
-.legend{position:absolute;left:10px;bottom:24px;background:var(--panel);border:1px solid var(--line);
+.legend{position:absolute;left:10px;bottom:24px;background:rgba(255,255,255,.94);box-shadow:0 2px 8px rgba(0,0,0,.1);border:1px solid var(--line);
   border-radius:9px;padding:8px 10px;font-size:10.5px;line-height:1.45;z-index:2;max-width:226px}
 .legend h3{margin:0 0 5px;font-size:11px;color:var(--muted);font-weight:600}
 .legend hr{border:none;border-top:1px solid var(--line);margin:7px 0}
@@ -92,9 +92,9 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 .legend p{margin:4px 0 0;line-height:1.5}
 .legend s{width:18px;height:3px;border-radius:2px;display:inline-block}
 .mk{width:11px;height:11px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
-.mk.sta{width:17px;height:17px;background:#fff;border:4px solid var(--accent);box-shadow:0 0 0 1px rgba(0,0,0,.5)}
+.mk.sta{width:17px;height:17px;background:#fff;border:4px solid var(--accent);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
 .mk.bar{width:7px;height:7px;border-width:1px}
-.maplibregl-popup-content{background:var(--panel);color:var(--fg);border:1px solid var(--line);
+.maplibregl-popup-content{background:var(--panel);color:var(--fg);border:1px solid var(--line);box-shadow:0 2px 8px rgba(0,0,0,.12);
   border-radius:8px;font-size:12px;padding:7px 10px}
 .maplibregl-popup-tip{border-top-color:var(--panel)!important;border-bottom-color:var(--panel)!important}
 </style>
@@ -152,16 +152,15 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const fmt=v=>`${String(Math.floor(v/60)%24).padStart(2,"0")}:${String(v%60).padStart(2,"0")}`;
 const hm=s=>{const[a,b]=s.split(":");return +a*60+ +b};
-const COLORS=["#4fd1a5","#59a5f5","#c48cf0","#f58fb0","#8fd14f","#f0b429","#6fd6d6","#d98e5a"];
-/* 終電の遅さを表す逐次スケール。遅いほど蛍光ピンク（2026-10-07 ユーザー指定）。
-   明度が単調に並び、隣どうしの差も確保してある。地の色を沈めたうえで検証スクリプトを通した
-   （明度単調・隣接差 0.06 以上・暗い端も地に対して 2.2:1）。色相はピンク〜紫にまたがる。*/
-const RAMP=["#6f3cc0","#bb2ab6","#f03aa8","#ff6ec7","#ffa6e4"];
+const COLORS=["#0f9d74","#2b7fd9","#8a4fd0","#d6457f","#5a9e1f","#b88300","#1a9fa8","#b4632e"];
+/* 終電の遅さを表す逐次スケール。遅いほどピンク（2026-10-07 ユーザー指定）。
+   白地に載せるので、早い＝淡い紫・遅い＝濃いピンクと、遅いほど濃くなる向きにしてある。*/
+const RAMP=["#cbbfe3","#b08ad6","#a05fc8","#d0389f","#e5007a"];
 let DEPART=19*60;      // 集合時刻は 19:00 に固定（事前計算の都合と、画面を増やさないため）
 const BARS_OK=30;      // これだけ飲み屋があれば「飲み会ができる駅」として金のフチを付ける
 const MAX_TRAVEL=90;   // 片道がこれを超える駅はおすすめに出さない（会場が遠くに引きずられるのを防ぐ）
-const NODATA="#8a8f99";
-const MAPDIM="#0d0b11";
+const NODATA="#c4c2bd";
+const MAPDIM="#ffffff";
 let META=null,RESULT=null,SEL=null,MAP=null,DETAIL=null,MARKERS=[],HOVER=null,BUCKETS=[],GEO={},FIT=false;
 const SAMPLE=[["荻窪","大手町"],["川口",""],["西船橋","品川"],["蒲田",""],["聖蹟桜ヶ丘","新宿"]];   // [自宅, 会社（空なら自宅から）]
 
@@ -176,9 +175,9 @@ function initMap(){
     MAP.getStyle().layers.forEach(l=>{
       if(l.type==="symbol") MAP.setLayoutProperty(l.id,"visibility","none");
     });
-    // 蛍光色を乗せるため地の色を沈める
+    // 駅の色と経路を読みやすくするため、下地を白で薄める
     MAP.addLayer({id:"dim",type:"background",
-      paint:{"background-color":MAPDIM,"background-opacity":.9}});
+      paint:{"background-color":MAPDIM,"background-opacity":.55}});
     // 路線網（公式のラインカラー。あくまで背景なので細く薄く）
     MAP.addSource("rails",{type:"geojson",data:empty()});
     MAP.addLayer({id:"rail-line",type:"line",source:"rails",
@@ -192,7 +191,7 @@ function initMap(){
       filter:[">=",["get","bars"],BARS_OK],
       paint:{"circle-color":"rgba(0,0,0,0)",
         "circle-radius":["interpolate",["linear"],["zoom"],8,5.2,11,8,15,13.5],
-        "circle-stroke-color":"#ffc24a",
+        "circle-stroke-color":"#d99a00",
         "circle-stroke-width":["interpolate",["linear"],["zoom"],8,1.1,11,1.8,15,2.6],
         "circle-stroke-opacity":.95}});
     MAP.addLayer({id:"st-dot",type:"circle",source:"stations",
@@ -200,11 +199,11 @@ function initMap(){
         "circle-opacity":["case",["has","bucket"],1,.75],
         "circle-radius":["interpolate",["linear"],["zoom"],
           8,["case",["has","bucket"],3.4,1.8],11,["case",["has","bucket"],5.6,2.6],15,["case",["has","bucket"],10,4.5]],
-        "circle-stroke-color":"#17141d",
+        "circle-stroke-color":"#ffffff",
         "circle-stroke-width":["interpolate",["linear"],["zoom"],8,.6,11,1.1,15,1.8]}});
     MAP.addLayer({id:"st-sel",type:"circle",source:"stations",filter:["==",["get","sel"],true],
       paint:{"circle-color":"rgba(0,0,0,0)","circle-radius":["interpolate",["linear"],["zoom"],8,6,11,9,15,14],
-        "circle-stroke-color":"#ffb037","circle-stroke-width":3}});
+        "circle-stroke-color":"#f08a00","circle-stroke-width":3}});
     MAP.on("click","st-dot",e=>selectStation(e.features[0].properties.name));
     MAP.on("mouseenter","st-dot",e=>{MAP.getCanvas().style.cursor="pointer"});
     MAP.on("mouseleave","st-dot",()=>{MAP.getCanvas().style.cursor="";if(HOVER){HOVER.remove();HOVER=null}});
@@ -220,7 +219,7 @@ function initMap(){
     });
     MAP.addSource("routes",{type:"geojson",data:empty()});
     MAP.addLayer({id:"route-case",type:"line",source:"routes",
-      paint:{"line-color":"#000","line-opacity":.22,"line-width":["case",["get","tight"],10,5]},
+      paint:{"line-color":"#fff","line-opacity":.9,"line-width":["case",["get","tight"],10,5]},
       layout:{"line-cap":"round","line-join":"round"}});
     MAP.addLayer({id:"route-other",type:"line",source:"routes",
       filter:["all",["!",["get","tight"]],["!=",["get","kind"],"walk"]],
@@ -232,7 +231,7 @@ function initMap(){
       layout:{"line-cap":"round","line-join":"round"}});
     MAP.addLayer({id:"route-tight",type:"line",source:"routes",
       filter:["all",["get","tight"],["!=",["get","kind"],"walk"]],
-      paint:{"line-color":"#ffb037","line-width":6},
+      paint:{"line-color":"#f08a00","line-width":6},
       layout:{"line-cap":"round","line-join":"round"}});
   });
 }
@@ -254,7 +253,7 @@ function drawDetail(d){
       const co=(l.shape||legShape(l.rw,l.a,l.b)||l.stops.map(s=>[s.lat,s.lon])).map(p=>[p[1],p[0]]);
       if(co.length<2) return;
       feats.push({type:"Feature",geometry:{type:"LineString",coordinates:co},
-        properties:{color:tight?"#ffb037":color,tight,kind:l.kind,who:r.name,line:l.line}});
+        properties:{color:tight?"#f08a00":color,tight,kind:l.kind,who:r.name,line:l.line}});
     });
   });
   MAP.getSource("routes").setData({type:"FeatureCollection",features:feats});
@@ -265,7 +264,7 @@ function drawDetail(d){
   d.routes.forEach((r,i)=>{
     const tight=(i===d.tight);
     const el=document.createElement("div"); el.className="mk";
-    el.style.background=tight?"#ffb037":COLORS[i%COLORS.length];
+    el.style.background=tight?"#f08a00":COLORS[i%COLORS.length];
     if(tight){el.style.width="15px";el.style.height="15px"}
     const last=r.legs.length?r.legs[r.legs.length-1].stops.slice(-1)[0]:null;
     const lat=last?last.lat:r.home_lat, lon=last?last.lon:r.home_lon;
@@ -289,7 +288,7 @@ function drawLegend(d){
     <div class="lrow"><span class="sw" style="background:${NODATA};opacity:.6"></span>
       <span class="tag" style="font-size:10px">帰れない</span></div>`:"";
   const sel=d?`${scale?"<hr>":""}<div class="lrow"><span class="mk sta"></span> 集合駅 ${d.station}</div>
-    ${d.routes.map((r,i)=>`<div class="lrow"><s style="background:${i===d.tight?"#ffb037":COLORS[i%COLORS.length]};
+    ${d.routes.map((r,i)=>`<div class="lrow"><s style="background:${i===d.tight?"#f08a00":COLORS[i%COLORS.length]};
       height:${i===d.tight?5:3}px"></s> ${r.name} ${r.limit_s}${i===d.tight?" ← 一番早い":""}</div>`).join("")}
     <p class="tag" style="font-size:10px">点線は徒歩</p>`:"";
   L.innerHTML=(scale+sel)||`<h3>関東の鉄道</h3>
@@ -473,7 +472,7 @@ function renderDetail(d,r){
       <span class="tag" id="endtv"></span></div>
     <div id="after"></div>
     <h2 style="margin-top:12px">帰りの経路</h2>
-    ${d.routes.map((x,i)=>`<div style="margin-bottom:7px;border-left:3px solid ${i===d.tight?"#ffb037":COLORS[i%COLORS.length]};padding-left:8px">
+    ${d.routes.map((x,i)=>`<div style="margin-bottom:7px;border-left:3px solid ${i===d.tight?"#f08a00":COLORS[i%COLORS.length]};padding-left:8px">
         <div style="font-size:13px"><b>${x.name}</b> ${x.limit_s} 発
           ${i===d.tight?'<span class="pill hot">一番早い</span>':""}</div>
         <div class="tag">${x.legs.map(l=>`${l.line}（${l.stops[0].name}${l.stops[0].time?" "+l.stops[0].time:""}
