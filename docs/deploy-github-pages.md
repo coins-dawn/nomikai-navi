@@ -87,5 +87,6 @@ GitHub の **Settings → Pages → Build and deployment → Source** を **GitH
 
 ```bash
 cp frontend/index.html site/index.html && cp frontend/engine-static.js site/engine.js
+python3 scripts/build_back.py                # 帰りの所要時間（home/*.json の back）だけ作り直すとき
 python3 scripts/verify_static.py --compare   # サーバ版（:8000）と突き合わせる
 ```

@@ -36,9 +36,15 @@ h1 span{color:var(--accent);text-shadow:0 0 14px rgba(255,180,60,.55)}
   .pane{border-right:none;border-left:none;border-bottom:1px solid var(--line);max-height:none}
   #mapwrap{height:60vh}
 }
-.person{display:grid;grid-template-columns:14px 1fr auto;gap:6px;align-items:center;
+.person{display:grid;grid-template-columns:14px 1fr auto;gap:6px;align-items:start;
   padding:8px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px;background:var(--panel2)}
-.person .dot{width:12px;height:12px;border-radius:50%}
+.person .dot{width:12px;height:12px;border-radius:50%;margin-top:8px}
+.person .fields{display:flex;flex-direction:column;gap:5px;min-width:0}
+.person .fields input{width:100%}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{flex:1;border:none;border-radius:0;background:var(--bg);color:var(--muted);font-size:12px;padding:5px 4px}
+.seg button.on{background:var(--accent);color:#2a1a00;font-weight:700}
+.person.home .of{display:none}
 .person .del{background:none;border:none;color:var(--muted);padding:2px 4px;font-size:15px;line-height:1}
 .person .del:hover{color:var(--warn)}
 .sample{display:flex;gap:6px;margin-bottom:8px}
@@ -104,13 +110,14 @@ th{color:var(--muted);font-weight:600;font-size:10px}
       </g>
       <path d="M22 30h5v18h-5z" fill="#ffe3a8" opacity=".9"/>
     </svg></h1>
-  <div class="sub">「早く帰らないといけない人」が<b>いちばん長くいられる駅</b>を探し、<b>帰りの経路</b>まで地図に描きます。</div>
+  <div class="sub">平日の飲み会で、<b>会社から来る人</b>・<b>自宅から来る人</b>の<b>移動時間の合計がいちばん少ない駅</b>を探し、帰りの経路まで地図に描きます。</div>
 </header>
 
 <div class="app">
   <!-- 1. 設定 -->
   <div class="pane">
-    <h2>参加者（自宅の最寄り駅）</h2>
+    <h2>参加者（平日の開催）</h2>
+    <div class="tag" style="margin-bottom:8px">会社から来る人は「会社→飲み会→自宅」、自宅から来る人（在宅勤務・休み）は「自宅→飲み会→自宅」の移動時間を数えます。</div>
     <div class="sample">
       <button id="sample">サンプルの5人を入れる</button>
       <button id="clear">全部消す</button>
@@ -156,7 +163,7 @@ const MAX_TRAVEL=90;   // 片道がこれを超える駅はおすすめに出さ
 const NODATA="#8a8f99";
 const MAPDIM="#0d0b11";
 let META=null,RESULT=null,SEL=null,MAP=null,DETAIL=null,MARKERS=[],HOVER=null,BUCKETS=[],GEO={},FIT=false;
-const SAMPLE=["荻窪","川口","西船橋","蒲田","聖蹟桜ヶ丘"];
+const SAMPLE=[["荻窪","大手町"],["川口",""],["西船橋","品川"],["蒲田",""],["聖蹟桜ヶ丘","新宿"]];   // [自宅, 会社（空なら自宅から）]
 
 /* ---------- 地図 ---------- */
 function initMap(){
@@ -371,12 +378,20 @@ function credits(){
     <br>飲み屋の位置と線路の形は OpenStreetMap（ODbL）。
     地図 © OpenFreeMap © OpenMapTiles © OpenStreetMap contributors。`;
 }
-function addPerson(station=""){
+function addPerson(station="",office=null){
   const d=document.createElement("div"); d.className="person";
   d.innerHTML=`<span class="dot"></span>
-    <input type="text" class="st" list="stations" placeholder="自宅の最寄り駅" value="${station}">
+    <div class="fields">
+      <div class="seg"><button data-m="office">会社から</button><button data-m="home">自宅から</button></div>
+      <input type="text" class="of" list="stations" placeholder="会社の最寄り駅" value="${office||""}">
+      <input type="text" class="st" list="stations" placeholder="自宅の最寄り駅" value="${station}">
+    </div>
     <button class="del" title="消す">×</button>`;
   $("#people").appendChild(d);
+  const mode=m=>{d.classList.toggle("home",m==="home");
+    d.querySelectorAll(".seg button").forEach(b=>b.classList.toggle("on",b.dataset.m===m))};
+  d.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>mode(b.dataset.m));
+  mode(office===""?"home":"office");
   d.querySelector(".del").onclick=()=>{d.remove();recolor()};
   recolor();
   return d;
@@ -384,18 +399,20 @@ function addPerson(station=""){
 function recolor(){$$(".person").forEach((d,i)=>d.querySelector(".dot").style.background=COLORS[i%COLORS.length])}
 $("#add").onclick=()=>addPerson();
 $("#clear").onclick=()=>{$("#people").innerHTML="";$(".app").classList.remove("has-result")};
-$("#sample").onclick=()=>{$("#people").innerHTML="";SAMPLE.forEach(st=>addPerson(st))};
+$("#sample").onclick=()=>{$("#people").innerHTML="";SAMPLE.forEach(([st,of])=>addPerson(st,of))};
 
 function collect(){
   return $$(".person").map(d=>{
-    const station=d.querySelector(".st").value.trim();
-    return station?{station}:null;
+    const station=d.querySelector(".st").value.trim(), office=d.querySelector(".of").value.trim();
+    if(!station) return null;
+    return d.classList.contains("home")?{station,from:"home"}:{station,from:"office",office};
   }).filter(Boolean);
 }
 
 $("#go").onclick=async()=>{
   const people=collect();
   if(people.length<2){$("#status").textContent="自宅の最寄り駅を 2 つ以上入れてください。";return}
+  if(people.some(p=>p.from==="office"&&!p.office)){$("#status").textContent="「会社から」の人は会社の最寄り駅も入れてください。";return}
   $("#status").textContent="計算中…";
   const j=await API.search({people,depart:DEPART,
     min_bars:BARS_OK,max_travel:MAX_TRAVEL});
@@ -414,17 +431,17 @@ function render(){
   const j=RESULT,c=j.candidates;
   if(!c.length){$("#list").innerHTML=`<div class="empty">条件に合う駅がありません。しきい値をゆるめてください。</div>`;
     $("#banner").innerHTML="";$("#detail").innerHTML="";return}
-  const best=c[0],bt=j.by_time;
-  $("#banner").innerHTML=`<div class="banner">移動時間だけで選ぶと <b>${bt.name}</b>
-    （いちばん早い人の終電 ${fmt(bt.min_limit)}・滞在 ${bt.min_stay}分）。
-    この方式だと <b>${best.name}</b>（終電 ${fmt(best.min_limit)}・滞在 ${best.min_stay}分）で
-    <b>${best.min_stay-bt.min_stay>=0?"+":""}${best.min_stay-bt.min_stay}分</b> 長くいられます。</div>`;
+  const best=c[0],bs=j.by_stay,n=j.people.length;
+  $("#banner").innerHTML=`<div class="banner">全員の移動時間の合計がいちばん少ないのは <b>${best.name}</b>：
+    合計 <b>${best.cost}分</b>（1人あたり ${Math.round(best.cost/n)}分）。
+    行きは 19:00 に会社または自宅を出て、帰りは ${fmt(j.back_depart)} に飲み会駅を出たときの所要時間です。
+    ${bs&&bs.name!==best.name?`<br><span class="tag">いちばん早い人が長くいられる駅で選ぶと ${bs.name}（合計 ${bs.cost}分・滞在 ${bs.min_stay}分）。</span>`:""}</div>`;
   $("#list").innerHTML=c.map((r,i)=>`<div class="cand ${r.name===SEL?"sel":""}" data-n="${r.name}">
       <div class="rank">${i+1}</div>
       <div><div class="nm">${r.name}</div>
         <div class="meta">飲み屋 ${r.bars}軒${r.median_m?`・店まで中央値${r.median_m}m`:""} ・${r.lines}路線
-          ・滞在 ${r.min_stay}分</div></div>
-      <div class="stay"><b>${fmt(r.min_limit)}</b><div>${j.people[r.tight].name} の終電</div></div></div>`).join("");
+          ・いちばん早い終電 ${fmt(r.min_limit)}（${j.people[r.tight].name}）</div></div>
+      <div class="stay"><b>${r.cost}分</b><div>移動の合計</div></div></div>`).join("");
   $$(".cand").forEach(el=>el.onclick=()=>selectStation(el.dataset.n));
 }
 
@@ -444,6 +461,13 @@ function renderDetail(d,r){
   const j=RESULT;
   const endMax=Math.min(...r.limits), endDefault=Math.max(j.depart+60,endMax-30);
   $("#detail").innerHTML=`<h2 style="margin-top:14px">${r.name} に集まったら</h2>
+    <table><thead><tr><th>参加者</th><th>行き</th><th>帰り</th><th>計</th></tr></thead><tbody>
+    ${j.people.map((p,k)=>`<tr><td>${p.name}</td>
+      <td>${p.where.replace("駅","")} ${r.times[k]}分</td><td>${r.back[k]<0?"-":r.back[k]+"分"}</td>
+      <td>${r.back[k]<0?"-":r.times[k]+r.back[k]+"分"}</td></tr>`).join("")}
+    <tr><td><b>合計</b></td><td>${r.sum}分</td><td>${r.cost==null?"-":r.cost-r.sum+"分"}</td><td><b>${r.cost==null?"-":r.cost+"分"}</b></td></tr>
+    </tbody></table>
+    ${r.cost==null?`<div class="tag">飲み屋が少ない駅なので、帰りの所要時間は計算していません。</div>`:""}
     <div class="row"><label>一次会の終了</label>
       <input type="range" id="endt" min="${j.depart+60}" max="${endMax}" step="5" value="${endDefault}">
       <span class="tag" id="endtv"></span></div>

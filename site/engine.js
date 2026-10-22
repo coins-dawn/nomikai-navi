@@ -18,7 +18,8 @@ function stationId(name){
 async function rowOf(p){
   const id = stationId(p.station);
   const home = await get(`home/${id}.json`);
-  return {id, limit:home.limit, travel:home.travel, route:get(`route/${id}.json`)};
+  return {id, limit:home.limit, travel:home.travel, back:home.back, back_depart:home.back_depart,
+          route:() => get(`route/${id}.json`)};
 }
 
 /* 区間 [路線, 乗る駅, 降りる駅] を、路線の駅順から駅の並びに戻す */
@@ -46,27 +47,37 @@ const API = {
   },
 
   async search({people, depart, min_bars, max_travel}){
-    const rows = [];
-    for (const p of people) rows.push(await rowOf(p));
+    // 自宅の行（終電・帰りの所要時間）と、行きの出発地の行（会社から来る人は会社の駅）
+    const rows = [], from = [];
+    for (const p of people){
+      const r = await rowOf(p);
+      rows.push(r);
+      from.push(p.from === "office" ? await rowOf({station:p.office}) : r);
+    }
     ROWS = rows;
     const all = [];
     META.stations.forEach((s, i) => {
       const limits = rows.map(r => r.limit[i]);
-      const times  = rows.map(r => r.travel[String(depart)][i]);
+      const times  = from.map(r => r.travel[String(depart)][i]);
       if (limits.some(v => v < 0) || times.some(v => v < 0)) return;
       const stay = limits.map((l, k) => l - (depart + times[k]));
       if (Math.min(...stay) <= 0) return;
+      const back = rows.map(r => r.back ? r.back[i] : -1);
+      const cost = back.some(v => v < 0) ? null
+        : times.reduce((a,b)=>a+b,0) + back.reduce((a,b)=>a+b,0);
       all.push({id:s.id, name:s.n, bars:s.b, median_m:s.m, lines:s.l, lat:s.lat, lon:s.lon,
-                times, limits, stay, min_stay:Math.min(...stay), min_limit:Math.min(...limits),
+                times, back, cost, limits, stay, min_stay:Math.min(...stay), min_limit:Math.min(...limits),
                 sum:times.reduce((a,b)=>a+b,0), max:Math.max(...times),
                 tight:limits.indexOf(Math.min(...limits))});
     });
-    const ok = all.filter(r => r.bars >= min_bars && r.max <= max_travel)
-                  .sort((a,b) => b.min_stay - a.min_stay).slice(0,5);
+    const pool = all.filter(r => r.bars >= min_bars && r.max <= max_travel && r.cost != null);
+    const ok = pool.slice().sort((a,b) => a.cost - b.cost).slice(0,5);
     return {
-      people: people.map(p => ({name:p.name || p.station, where:`${p.station}駅`})),
-      depart, candidates: ok, all,
-      by_time: all.length ? all.reduce((a,b) => b.sum < a.sum ? b : a) : null,
+      people: people.map(p => ({name:p.name || p.station, home:p.station, from:p.from,
+                                where: p.from === "office" ? `${p.office}駅（会社）` : `${p.station}駅（自宅）`})),
+      depart, back_depart: rows[0].back_depart, candidates: ok, all,
+      // 比較用: 前の方式（いちばん早い人がいちばん長くいられる駅）
+      by_stay: pool.length ? pool.reduce((a,b) => b.min_stay > a.min_stay ? b : a) : null,
       n_all: all.length, n_ok: ok.length,
     };
   },
@@ -77,7 +88,7 @@ const API = {
     const out = [];
     for (let k = 0; k < people.length; k++){
       const p = people[k], r = ROWS[k];
-      const routes = await r.route;
+      const routes = await r.route();
       const lim = r.limit[cid];
       const legs = (routes[cid] || []).map(expand).map(l => ({...l, stops:l.nodes.map(stop)}));
       if (legs.length) legs[0].stops[0].time = hhmm(lim);

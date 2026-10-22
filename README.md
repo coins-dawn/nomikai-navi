@@ -24,6 +24,7 @@ python3 server.py                 # http://127.0.0.1:8000/
 
 ```bash
 python3 scripts/build_static.py       # site/ を作る（CPU 2 コアで約 30 分）
+python3 scripts/build_back.py         # 帰りの所要時間だけ足し直す（build_static.py にも含まれる。約 20 秒）
 python3 scripts/verify_static.py --compare   # 静的版とサーバ版の答えを突き合わせる
 python3 scripts/shot.py dark          # 画面キャプチャ
 ```
@@ -59,4 +60,5 @@ python3 scripts/shot.py dark          # 画面キャプチャ
 - 乗換は一律 5 分。直通運転も乗換として扱っている。
 - 経路は鉄道のみ（路線バスは扱わない）。
 - 線路の線形は 1,109 駅間のうち 860 で引けている。残りは駅間を直線で結んでいる。
-- 平日ダイヤのみ。集合時刻は 19:00 固定。
+- 平日ダイヤのみ。集合時刻は 19:00 固定。帰りの所要時間は 21:30 発で計算している。
+- 帰りの所要時間は飲み屋 10 軒以上の駅についてだけ計算している。

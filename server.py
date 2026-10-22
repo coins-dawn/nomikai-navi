@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "scripts"))
 from network import Network, fmt, dist_m   # noqa: E402
+from build_back import BACK_DEPART, CAND_MIN_BARS   # noqa: E402
 
 DEFAULT_DEPART = 19 * 60
 
@@ -82,15 +83,21 @@ def search(payload):
     min_bars = payload.get("min_bars", 30)
     max_travel = payload.get("max_travel", 90)
 
+    def node_of(name):
+        nid = NAME2ID.get(name)
+        if nid is None:
+            raise ValueError(f"知らない駅です: {name}")
+        return nid
+
     ids, lims, arrs, labels = [], [], [], []
     for p in people:
-        nid = NAME2ID.get(p["station"])
-        if nid is None:
-            raise ValueError(f"知らない駅です: {p['station']}")
+        nid = node_of(p["station"])
+        # 会社から来る人は会社の駅から出る。帰りはどちらも自宅へ
+        origin = node_of(p["office"]) if p.get("from") == "office" else nid
         ids.append(nid)
-        arrs.append(arrivals_for(nid, depart))
+        arrs.append(arrivals_for(origin, depart))
         lims.append(limits_for(nid, None))
-        labels.append(f"{p['station']}駅")
+        labels.append(f"{p['office']}駅（会社）" if p.get("from") == "office" else f"{p['station']}駅（自宅）")
 
     rows = []
     for n in NODES:
@@ -102,28 +109,32 @@ def search(payload):
         stay = [l - (depart + t) for l, t in zip(limits, times)]
         if min(stay) <= 0:
             continue
+        back, cost = [-1] * len(ids), None
+        if n["bars"] >= CAND_MIN_BARS:
+            fw = arrivals_for(i, BACK_DEPART)
+            back = [fw[h] - BACK_DEPART if fw[h] < 10**6 else -1 for h in ids]
+            if min(back) >= 0:
+                cost = sum(times) + sum(back)
         rows.append({
             "id": n["id"],
             "name": n["name"], "bars": n["bars"], "median_m": n["median_m"], "lines": n["lines"],
             "lat": n["lat"], "lon": n["lon"],
-            "times": times, "limits": limits, "stay": stay,
+            "times": times, "back": back, "cost": cost, "limits": limits, "stay": stay,
             "min_stay": min(stay), "min_limit": min(limits),
             "sum": sum(times), "max": max(times),
             "tight": limits.index(min(limits)),
         })
 
-    ok = [r for r in rows if r["bars"] >= min_bars and r["max"] <= max_travel]
-    ok.sort(key=lambda r: -r["min_stay"])
-    ok = ok[:5]
-    # 比較用: 所要時間だけで選んだ駅（飲み屋も終電も見ない）
-    by_time = min(rows, key=lambda r: r["sum"]) if rows else None
+    pool = [r for r in rows if r["bars"] >= min_bars and r["max"] <= max_travel and r["cost"] is not None]
+    ok = sorted(pool, key=lambda r: r["cost"])[:5]
     return {
-        "people": [{"name": p.get("name") or p["station"], "where": labels[i]}
-                   for i, p in enumerate(people)],
-        "depart": depart,
+        "people": [{"name": p.get("name") or p["station"], "home": p["station"], "from": p.get("from"),
+                    "where": labels[i]} for i, p in enumerate(people)],
+        "depart": depart, "back_depart": BACK_DEPART,
         "candidates": ok,
         "all": rows,
-        "by_time": by_time,
+        # 比較用: 前の方式（いちばん早い人がいちばん長くいられる駅）
+        "by_stay": max(pool, key=lambda r: r["min_stay"]) if pool else None,
         "n_all": len(rows), "n_ok": len(ok),
     }
 

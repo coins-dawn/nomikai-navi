@@ -8,7 +8,7 @@
 
 出力（site/data/）
   meta.json            駅・路線（駅の並びとラインカラー）・集合時刻の一覧
-  home/<駅>.json       その駅に住む人の 帰宅リミット と 所要時間（全駅ぶん）
+  home/<駅>.json       その駅に住む人の 帰宅リミット と 所要時間（行き・帰り。全駅ぶん）
   route/<自宅>.json    その自宅への帰りの経路。区間は [路線, 乗る駅, 降りる駅] の 3 つだけで、
                        途中の駅は路線の駅順から画面側で引き直す（容量を 1/4 にするため）
   bars/<駅>.json       その駅の半径 500m の飲み屋
@@ -19,6 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from network import Network, dist_m   # noqa: E402
+from build_back import add_back        # noqa: E402
 
 SITE = ROOT / "site"
 DATA = SITE / "data"
@@ -88,6 +89,7 @@ def main(limit_rows=None):
         (DATA / "home" / f"{h}.json").write_text(json.dumps(rec, separators=(",", ":")))
         if i % 100 == 0:
             print(f"  自宅 {i}/{len(homes)}  {time.time()-t0:.0f}s", flush=True)
+    add_back(net, index)   # 飲み会駅 → 自宅 の帰りの所要時間を home ファイルに足す
 
     # --- 路線（駅の並びとラインカラー）。経路の描画と路線網の表示の両方に使う ---
     rails = []

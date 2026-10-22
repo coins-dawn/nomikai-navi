@@ -12,7 +12,7 @@ SITE = ROOT / "site"
 STATIC_URL = "http://127.0.0.1:8010/"
 SERVER_URL = "http://127.0.0.1:8000"
 
-SAMPLE = ["荻窪", "川口", "西船橋", "蒲田", "聖蹟桜ヶ丘"]
+SAMPLE = [("荻窪", "大手町"), ("川口", ""), ("西船橋", "品川"), ("蒲田", ""), ("聖蹟桜ヶ丘", "新宿")]   # 画面のサンプルと同じ
 DEPART, MIN_BARS, MAX_TRAVEL = 19 * 60, 30, 90
 
 
@@ -35,18 +35,20 @@ def check_files():
         assert len(d["limit"]) == nc
         for p in meta["presets"]:
             assert len(d["travel"][str(p)]) == nc, f"{f.name} に集合時刻 {p} がない"
+        assert len(d["back"]) == nc, f"{f.name} に帰りの所要時間がない（build_back.py）"
     total = sum(f.stat().st_size for f in SITE.rglob("*") if f.is_file())
     print(f"合計 {total/1e6:.1f}MB / {sum(1 for f in SITE.rglob('*') if f.is_file())} ファイル")
     return meta
 
 
 def server_top():
-    people = [{"station": s} for s in SAMPLE]
+    people = [{"station": h, "from": "office", "office": o} if o else {"station": h, "from": "home"}
+              for h, o in SAMPLE]
     body = json.dumps({"people": people, "depart": DEPART,
                        "min_bars": MIN_BARS, "max_travel": MAX_TRAVEL}).encode()
     req = urllib.request.Request(f"{SERVER_URL}/api/search", data=body)
     j = json.loads(urllib.request.urlopen(req).read())
-    return [(c["name"], c["min_limit"], c["min_stay"]) for c in j["candidates"]]
+    return [(c["name"], c["cost"], c["min_limit"], c["min_stay"]) for c in j["candidates"]]
 
 
 async def static_top():
@@ -63,7 +65,7 @@ async def static_top():
         await pg.click("#go")
         await pg.wait_for_selector(".cand", timeout=60000)
         await pg.wait_for_timeout(5000)
-        rows = await pg.evaluate("() => RESULT.candidates.map(c => [c.name, c.min_limit, c.min_stay])")
+        rows = await pg.evaluate("() => RESULT.candidates.map(c => [c.name, c.cost, c.min_limit, c.min_stay])")
         await pg.screenshot(path="docs/20-static.png")
         await pg.evaluate("() => { MAP.easeTo({center:[139.76,35.70],zoom:12.2,duration:0}); return null }")
         await pg.wait_for_timeout(5000)
