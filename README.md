@@ -7,7 +7,7 @@
 | | |
 |---|---|
 | 探索 | 自前の RAPTOR（`scripts/network.py`）。順方向＝最早到着、逆方向＝最遅出発。どちらも経路を復元できる |
-| 線路の線形 | `scripts/build_rail_shapes.py`。OSM の線路グラフ上で隣り合う駅を最短経路でつなぐ（路線名では対応づけない） |
+| 線路の線形 | `scripts/build_rail_shapes.py`。OSM の路線（route リレーション）の線路の上で隣り合う駅を最短経路でつなぐ。路線との対応は名前でなく、駅が線路の近くに並ぶかで決める |
 | サーバ版 | `server.py`（Python 標準ライブラリのみ、ポート 8000）。任意の入力でその場で計算する |
 | 静的版 | `scripts/build_static.py` で `site/` を作る。GitHub Pages 用 |
 | 画面 | `frontend/index.html`（共通）＋ MapLibre GL JS。計算は `engine-server.js` / `engine-static.js` で差し替える |
@@ -17,7 +17,7 @@
 ```bash
 python3 scripts/fetch_odpt.py     # 鉄道データを取得（ワークスペース直下の .env のトークンを使う）
 python3 scripts/build_bars.py     # OSM から飲食店を抽出する（osmium が要る）
-python3 scripts/build_rail_shapes.py <rail.geojsonl>   # OSM から線路の線形をつくる
+python3 scripts/build_rail_shapes.py <routes.opl>   # OSM の路線リレーションから線路の線形をつくる（作り方はスクリプト冒頭）
 python3 scripts/build_index.py    # 索引をつくる
 python3 server.py                 # http://127.0.0.1:8000/
 ```

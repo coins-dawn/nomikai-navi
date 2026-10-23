@@ -392,7 +392,7 @@ function marker(lat,lon,cls,html){
 }
 
 const legCoords=l=>cleanLine(l.shape||legShape(l.rw,l.a,l.b)||l.stops.map(s=>[s.lat,s.lon]));
-/* 線路の形には、駅の先まで行って戻るトゲ（区間のつなぎ目の行き過ぎ）が混じる。
+/* 駅間の形をつないだ所に、駅の先まで行って戻るトゲが残ることがある。
    そのまま line-offset で横にずらすと、トゲが離れた短い線になって見えるので、同じ点と 100° を超える折り返しを取り除く */
 function cleanLine(co){
   const out=[];
@@ -522,28 +522,14 @@ function drawNetwork(){
 }
 
 /* 区間（路線・乗る駅・降りる駅）を実際の線路の形に直す */
-const meters=(p,q)=>Math.hypot((p[0]-q[0])*111000,(p[1]-q[1])*111000*Math.cos(p[0]*Math.PI/180));
 function legShape(rw,a,b){
   if(rw==null||rw<0||!META.shapes) return null;
   const rail=META.rails[rw], segs=META.shapes[rw];
   if(!rail||!segs) return null;
   const i=rail.o.indexOf(a), j=rail.o.indexOf(b);
   if(i<0||j<0||i===j) return null;
-  // 駅間の形は、逆向きに入っていたり、駅を行き過ぎて戻ったり、端が駅から離れていたりする。
-  // 前の駅にいちばん近い点から次の駅にいちばん近い点までを切り出し、両端を駅の位置につなぐ
-  const d2=(p,g)=>(p[0]-g.lat)**2+(p[1]-g.lon)**2;
-  const near=(sg,g)=>sg.reduce((b,p,k)=>d2(p,g)<d2(sg[b],g)?k:b,0);
-  const fwd=k=>{
-    const sg=segs[k]||[], g0=GEO[rail.o[k]], g1=GEO[rail.o[k+1]];
-    if(!sg.length||!g0||!g1) return sg;
-    const a=near(sg,g0), b=near(sg,g1);
-    const mid=a<=b?sg.slice(a,b+1):sg.slice(b,a+1).reverse();
-    const P0=[g0.lat,g0.lon], P1=[g1.lat,g1.lon], line=[P0,...mid,P1];
-    // 端が駅から 450m 以上離れているか、駅間の直線の 1.5 倍を超えて回り道している形は信用せず、駅どうしを直線で結ぶ
-    let len=0; for(let k=1;k<line.length;k++) len+=meters(line[k-1],line[k]);
-    const bad=meters(sg[a],P0)>450||meters(sg[b],P1)>450||len>1.5*meters(P0,P1)+500;
-    return bad?[P0,P1]:line;
-  };
+  // 駅間の形は build_rail_shapes.py が路線ごとの線路（OSM の route リレーション）で引いたもの。前の駅→次の駅の向き
+  const fwd=k=>segs[k]||[];
   let out=[];
   if(i<j) for(let k=i;k<j;k++) out=out.concat(fwd(k));
   else for(let k=i-1;k>=j;k--) out=out.concat(fwd(k).slice().reverse());
