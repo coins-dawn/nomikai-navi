@@ -24,19 +24,25 @@ h1{margin:0;font-size:17px;letter-spacing:.01em;display:flex;align-items:center;
 h1 span{color:inherit}
 .logo{display:flex;align-items:center;gap:7px;color:inherit;text-decoration:none}
 .sub{color:var(--muted);font-size:12px}
-.app{display:grid;grid-template-columns:330px 1fr;flex:1;min-height:0}
+.app{display:grid;grid-template-columns:310px 1fr;flex:1;min-height:0}
 .app[hidden],#step1[hidden]{display:none}
-.app.has-result{grid-template-columns:330px 1fr 380px}
-#result{display:none;border-right:none;border-left:1px solid var(--line)}
-.app.has-result #result{display:block}
+/* 2 の画面は最大 4 列: 候補 | 各人 | 地図 | その人の詳細（選ぶと右に開く） */
+#ppl,#person{display:none}
+.app.has-p{grid-template-columns:310px 340px 1fr}
+.app.has-p #ppl{display:block}
+.app.has-p.has-d{grid-template-columns:310px 340px 1fr 320px}
+.app.has-d #person{display:block;border-right:none;border-left:1px solid var(--line)}
+.pane .x{float:right;background:none;border:none;color:var(--muted);font-size:16px;line-height:1;padding:0 2px}
+.pane .x:hover{color:var(--fg)}
 .pane{overflow-y:auto;border-right:1px solid var(--line);padding:12px}
 .pane h2{margin:0 0 8px;font-size:12px;color:var(--muted);letter-spacing:.05em}
 #map{width:100%;height:100%}
 @media(max-width:1100px){
   body{overflow:auto;display:block}
-  .app,.app.has-result{grid-template-columns:1fr;height:auto}
+  .app,.app.has-p,.app.has-p.has-d{grid-template-columns:1fr;height:auto}
   .pane{border-right:none;border-left:none;border-bottom:1px solid var(--line);max-height:none}
-  #mapwrap{height:60vh}
+  #mapwrap{height:60vh;order:4}
+  #person{order:3}
 }
 .person{display:grid;grid-template-columns:14px 1fr auto;gap:6px;align-items:start;
   padding:8px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px;background:var(--panel2)}
@@ -96,7 +102,7 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 .mk{width:11px;height:11px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
 .mk.sta{width:17px;height:17px;background:#fff;border:4px solid var(--accent);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
 .mk.bar{width:7px;height:7px;border-width:1px}
-/* 3 つの段階（予定を入れる → 日付を比べる → 駅を決める） */
+/* 2 つの段階（予定を入れる → 日付と駅を決める） */
 .stepbar{flex:none;display:flex;justify-content:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--panel2)}
 .steps{display:flex;gap:6px;align-items:center}
 .steps button{border:1px solid transparent;background:none;color:var(--muted);font-size:13.5px;padding:6px 14px;border-radius:99px}
@@ -152,11 +158,24 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 .day .diff{font-size:11px;color:var(--warn);margin-left:6px}
 .day .diff.best{color:var(--accent2)}
 .day.first{border-color:var(--accent);background:#f1f6fe}
+.day.hl{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
 .who{border:1px solid var(--line);border-left:4px solid var(--pc);border-radius:8px;padding:7px 9px;margin-bottom:7px;cursor:pointer}
 .who:hover{background:var(--panel2)}
 .who.on{border-color:var(--pc);box-shadow:0 0 0 2px var(--pc) inset;background:#fff}
 .who .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--pc);margin-right:5px}
-.back{background:none;border:none;color:var(--accent-ink);padding:0 0 8px;font-size:13px}
+/* その人の詳細: 乗り換えを縦に並べる */
+.trip{margin:6px 0 14px}
+.trip h3{margin:0 0 6px;font-size:13px}
+.trip h3 .tag{font-weight:400}
+.tl{position:relative;margin-left:6px;padding-left:16px;border-left:3px solid var(--pc)}
+.tl.go{border-left-style:solid}
+.tl .stn{position:relative;font-size:13px;font-weight:700;margin:0 0 2px}
+.tl .stn::before{content:"";position:absolute;left:-23px;top:4px;width:11px;height:11px;border-radius:50%;
+  background:#fff;border:3px solid var(--pc)}
+.tl .ride{font-size:12px;color:var(--muted);margin:2px 0 8px}
+.tl .ride b{color:var(--fg);font-weight:600}
+.tl .ride.walk{font-style:italic}
+.tl .xfer{font-size:10.5px;color:var(--warn);margin:-4px 0 6px}
 .pin.p-date{flex-direction:column;gap:2px}
 .pin.p-date span{background:var(--accent);color:#fff;text-align:center;line-height:1.35;padding:3px 6px;font-size:12px}
 .pin.p-date span small{display:block;font-weight:600;font-size:10.5px;opacity:.95}
@@ -196,8 +215,7 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 <div class="stepbar">
   <nav class="steps" id="steps">
     <button data-s="1"><b>1</b>予定を入れる</button><i>›</i>
-    <button data-s="2"><b>2</b>日付を比べる</button><i>›</i>
-    <button data-s="3"><b>3</b>駅を決める</button>
+    <button data-s="2"><b>2</b>日付と駅を決める</button>
   </nav>
 </div>
 
@@ -206,7 +224,7 @@ th{color:var(--muted);font-weight:600;font-size:10px}
   <div class="s1wrap">
     <div class="intro">
       <div><b>まずはサンプルで試せます</b>
-        <div class="tag">5人・候補日6日の例が入ります。続けて「日付を比べる」を押すと、結果まで見られます。</div></div>
+        <div class="tag">5人・候補日6日の例が入ります。続けて「日付と駅を比べる」を押すと、結果まで見られます。</div></div>
       <button id="sample">サンプルで試す</button>
     </div>
     <h2>候補日（平日）</h2>
@@ -218,7 +236,7 @@ th{color:var(--muted);font-weight:600;font-size:10px}
       会社から来る人は「会社→飲み会→自宅」、自宅から来る人（在宅勤務・休み）は「自宅→飲み会→自宅」の移動時間を数えます。</div>
     <div id="people"></div>
     <button class="ghost" id="add">＋ 参加者を追加</button>
-    <button class="primary" id="compare" style="margin-top:10px">日付を比べる</button>
+    <button class="primary" id="compare" style="margin-top:10px">日付と駅を比べる</button>
     <div class="tag" id="status" style="margin-top:8px"></div>
     <h2>使っているオープンデータ</h2>
     <div class="tag credits"></div>
@@ -226,34 +244,30 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 </section>
 
 <div class="app" id="app" hidden>
-  <!-- 2・3 の左側 -->
+  <!-- 左: 飲み会の候補（候補日ごとの最適な駅） -->
   <div class="pane" id="left">
-    <div id="step2pane">
-      <h2>候補日ごとの最適な駅</h2>
-      <div id="daysBanner"></div>
-      <div id="days"></div>
-    </div>
-    <div id="step3pane">
-      <button class="back" id="back">← 日付の比較に戻る</button>
-      <div id="dayHead"></div>
-    </div>
+    <h2>飲み会の候補（日付と駅）</h2>
+    <div id="daysBanner"></div>
+    <div id="days"></div>
     <h2 style="margin-top:16px">使っているオープンデータ</h2>
     <div class="tag credits"></div>
   </div>
-
-  <!-- 2. 地図 -->
+  <!-- 左から 2 番目: 選んだ候補での各人の移動 -->
+  <div class="pane" id="ppl">
+    <button class="x" id="closeP" title="閉じる">×</button>
+    <div id="banner"></div>
+    <div id="detail"></div>
+  </div>
+  <!-- 地図 -->
   <div id="mapwrap" style="position:relative;overflow:hidden">
     <div id="map"></div>
     <div class="legend" id="legend" style="display:none"></div>
   </div>
-  <!-- 3. 計算結果（右端） -->
-  <div class="pane" id="result">
-    <h2>計算結果</h2>
-    <div id="banner"></div>
-    <div id="list"></div>
-    <div id="detail"></div>
+  <!-- 右端: 選んだ人の乗り換え -->
+  <div class="pane" id="person">
+    <button class="x" id="closeD" title="閉じる">×</button>
+    <div id="pdetail"></div>
   </div>
-
 </div>
 
 <datalist id="stations"></datalist>
@@ -268,7 +282,7 @@ let DEPART=19*60;      // 集合時刻は 19:00 に固定（事前計算の都�
 const BARS_OK=30;      // これだけ飲み屋があれば「飲み会ができる駅」として候補にする
 const MAX_TRAVEL=90;   // 片道がこれを超える駅はおすすめに出さない（会場が遠くに引きずられるのを防ぐ）
 const MAPDIM="#ffffff";
-let SELP=null;   // 3 の画面で選んでいる参加者（経路を強調する）
+let SELP=null;   // 2 の画面で選んでいる参加者（右端に乗り換えを出し、経路を強調する）
 let META=null,RESULT=null,SEL=null,MAP=null,DETAIL=null,MARKERS=[],HOVER=null,GEO={},FIT=false;
 /* サンプル: 5 人・候補日 6 日。week は月〜金の出社（1＝会社から）。over はその日だけの例外 */
 const SAMPLE={
@@ -373,18 +387,21 @@ function drawDetail(d){
   MAP.getSource("routes").setData({type:"FeatureCollection",features:feats});
 
   drawPins();
+  // 人を選んでいるときはその人の経路に寄せる
   const b=new maplibregl.LngLatBounds([d.lon,d.lat],[d.lon,d.lat]);
-  pinPoints().forEach(([lat,lon])=>b.extend([lon,lat]));
-  d.routes.forEach(r=>[...r.go,...r.back].forEach(l=>legCoords(l).forEach(p=>b.extend([p[1],p[0]]))));
-  if(FIT){MAP.fitBounds(b,{padding:{top:60,bottom:60,left:60,right:60},duration:700,maxZoom:13});FIT=false}
+  if(SELP==null) pinPoints().forEach(([lat,lon])=>b.extend([lon,lat]));
+  d.routes.forEach((r,i)=>{if(SELP==null||SELP===i)[...r.go,...r.back].forEach(l=>legCoords(l).forEach(p=>b.extend([p[1],p[0]])))});
   drawLegend(d);
+  // 凡例（左下）に経路が隠れないよう、下の余白を凡例の高さぶん空ける
+  const lh=Math.min($("#legend").offsetHeight+20,MAP.getContainer().clientHeight/2);
+  if(FIT){MAP.fitBounds(b,{padding:{top:50,bottom:Math.max(50,lh),left:50,right:50},duration:700,maxZoom:13});FIT=false}
 }
 
 /* 自宅（丸）・会社（四角）は参加者の色、候補駅は順位入りのオレンジ。選んだ候補は大きく */
 const geoByName=n=>META.geo.find(s=>s.n===n);
 function pinList(){
   const out=[];
-  if(STEP===2&&DAYS){
+  if(STEP===2&&DAYS&&!CHOSEN){
     // 全員の自宅と（いれば）会社、各日の最適な駅に日付のラベル
     STATE.people.forEach((p,i)=>{
       const c=COLORS[i%COLORS.length];
@@ -405,7 +422,7 @@ function pinList(){
     out.push({kind:"home",st:p.station,color:c,label:`${p.station}（自宅）`});
     if(p.from==="office") out.push({kind:"office",st:p.office,color:c,label:`${p.office}（会社）`});
   });
-  if(SEL) out.push({kind:"cand",st:SEL,rank:"",label:SEL});   // 飲み会の駅（2 の画面で決めた 1 つだけ）
+  if(SEL) out.push({kind:"cand",st:SEL,rank:"",label:SEL});   // 飲み会の駅（選んだ候補の 1 つだけ）
   return out;
 }
 const pinPoints=()=>pinList().map(x=>geoByName(x.st)).filter(Boolean).map(g=>[g.lat,g.lon]);
@@ -424,7 +441,6 @@ function drawPins(){
     el.innerHTML=x.kind==="date"?`<span>${x.html}</span><i></i>`
       :x.kind==="cand"?`<i>${x.rank}</i>${sel?`<span>${x.label}</span>`:""}`
       :`<i style="background:${x.color}"></i><span>${x.label}</span>`;
-    if(x.kind==="cand") el.onclick=e=>{e.stopPropagation();selectStation(x.st)};
     const k=g.id+x.kind; const n=at[k]=(at[k]||0)+1;
     // 日付の札は点の上に立てる（横に長いと隣の駅の札と重なるので縦に積む）
     const m=x.kind==="date"?new maplibregl.Marker({element:el,anchor:"bottom",offset:[0,8]}).setLngLat([g.lon,g.lat])
@@ -438,10 +454,10 @@ function drawPins(){
 /* 凡例: 上段＝駅の色の意味（逐次スケール）／下段＝選んだ駅の中身 */
 function drawLegend(d){
   const L=$("#legend"); L.style.display="";
-  if(STEP===2){L.innerHTML=`<div class="lrow"><span class="mark" style="background:var(--accent);color:#fff;border:none">駅：日付</span> その日の最適な駅</div>
+  if(STEP===2&&!CHOSEN){L.innerHTML=`<div class="lrow"><span class="mark" style="background:var(--accent);color:#fff;border:none">駅：日付</span> その日の最適な駅</div>
     <div class="lrow"><span class="lg-home"></span> 自宅の最寄り駅</div>
     <div class="lrow"><span class="lg-office"></span> 会社の最寄り駅</div>
-    <p class="tag" style="font-size:10px">日付のカードか地図のラベルを押すと、その日の駅選びに進みます。</p>`;return}
+    <p class="tag" style="font-size:10px">左の候補か地図のラベルを押すと、各人の移動が出ます。</p>`;return}
   if(!RESULT){L.innerHTML=`<h3>関東の鉄道</h3>`;return}
   L.innerHTML=`<div class="lrow"><span class="lg-cand"></span> 飲み会の駅</div>
     <div class="lrow"><span class="lg-home"></span> 自宅の最寄り駅</div>
@@ -449,7 +465,7 @@ function drawLegend(d){
     ${d?`<hr><h3>${d.station} への行きと帰り</h3>
     ${d.routes.map((r,i)=>`<div class="lrow"><s style="background:${pcol(i)};height:4px"></s> ${r.name}</div>`).join("")}
     <p class="tag" style="font-size:10px">細い線＝行き（19:00 発）、太い線＝帰り（21:30 発）。点線は徒歩。
-    右の一覧で人を選ぶと、その人の経路が強調されます。</p>`:""}`;
+    一覧で人を選ぶと、その人の経路が強調されます。</p>`:""}`;
 }
 
 /* 路線網と全駅を敷く（検索前から出す） */
@@ -532,25 +548,28 @@ function markOf(p,iso){
   if(p.over[iso]) return p.over[iso]==="会"&&!p.office.trim()?"家":p.over[iso];
   return p.office.trim()&&p.week[wday(iso)-1]?"会":"家";
 }
-function stale(){DAYS=null;CHOSEN=null;steps()}
+function stale(){DAYS=null;CHOSEN=null;SELP=null;steps()}
 function steps(){
   $$("#steps button").forEach(b=>{
     const k=+b.dataset.s;
     b.classList.toggle("on",k===STEP);
-    b.disabled=(k===2&&!DAYS)||(k===3&&!CHOSEN);
+    b.disabled=k===2&&!DAYS;
   });
 }
 function go(k){
   STEP=k; steps();
   $("#step1").hidden=k!==1; $("#app").hidden=k===1;
-  $("#step2pane").hidden=k!==2; $("#step3pane").hidden=k!==3;
-  $("#app").classList.toggle("has-result",k===3);
-  if(k!==1){MAP.resize();FIT=true}
-  if(k===2) showDays();
+  if(k===2){layout();showDays()}
   window.scrollTo(0,0);
 }
+/* 候補を選ぶと 2 列目、人を選ぶと右端の列が開く */
+function layout(){
+  const a=$("#app");
+  a.classList.toggle("has-p",!!CHOSEN); a.classList.toggle("has-d",!!CHOSEN&&SELP!=null);
+  if(MAP) MAP.resize();
+}
 $(".logo").onclick=e=>{e.preventDefault();location.reload()};   // ロゴで最初からやり直す
-$$("#steps button").forEach(b=>b.onclick=()=>{if(b.disabled) return; +b.dataset.s===3?openDay(CHOSEN):go(+b.dataset.s)});
+$$("#steps button").forEach(b=>b.onclick=()=>{if(!b.disabled) go(+b.dataset.s)});
 
 function renderDates(){
   $("#dates").innerHTML=STATE.dates.length?STATE.dates.map(d=>`<span class="chip">${dlabel(d)}<button data-d="${d}" title="外す">×</button></span>`).join("")
@@ -609,7 +628,7 @@ function peopleOn(iso){
 }
 const pcol=i=>COLORS[((RESULT&&RESULT._people[i]&&RESULT._people[i].ci)??i)%COLORS.length];
 
-/* ---------- 2. 日付を比べる ---------- */
+/* ---------- 2. 日付と駅を決める ---------- */
 $("#compare").onclick=async()=>{
   const st=$("#status");
   const known=new Set(META.geo.map(s=>s.n));
@@ -638,9 +657,6 @@ $("#compare").onclick=async()=>{
 };
 
 function showDays(){
-  RESULT=null; SEL=null;
-  MAP.getSource("routes").setData(empty());
-  paintStations(null);
   const top=DAYS[0], N=STATE.people.filter(p=>p.home.trim()).length;
   const full=DAYS.filter(d=>d.n===top.n&&d.best);
   const spread=full.length>1?Math.round(full[full.length-1].per-full[0].per):0;
@@ -650,7 +666,7 @@ function showDays(){
     ${full.length<2?"":spread<5?`${top.n}人が来られる日どうしの差は 1人 ${spread}分以内です。<b>どの日でもほぼ同じ</b>なので、日付はほかの都合で決めて大丈夫です。`
       :`${top.n}人が来られる日の中では、いちばん多い日と 1人 <b>${spread}分</b> 違います。`}</div>`
     :`<div class="empty">どの日も条件に合う駅がありません。</div>`;
-  $("#days").innerHTML=DAYS.map((d,k)=>`<div class="day ${k===0&&d.best?"first":""}" data-k="${k}">
+  $("#days").innerHTML=DAYS.map((d,k)=>`<div class="day ${k===0&&d.best?"first":""}${d===CHOSEN?" hl":""}" data-k="${k}">
     <div class="top"><span class="dt">${dlabel(d.iso)}</span><span class="att">${d.n}/${N}人</span>
       <span class="per">${d.best?`<b>${Math.round(d.per)}分</b><div>1人あたり</div>`:""}</span></div>
     <div class="st">${d.best?`<b>${d.best.name}</b>（合計 ${d.best.cost}分）${k===0?'<span class="diff best">いちばん少ない</span>'
@@ -660,74 +676,106 @@ function showDays(){
       ${{会:"会社",家:"自宅","×":"×"}[markOf(p,d.iso)]}</span>`:"").join("")}</div></div>`).join("");
   $$(".day").forEach(el=>{
     const d=DAYS[+el.dataset.k];
-    if(d.best) el.onclick=()=>openDay(d);
+    if(d.best) el.onclick=()=>d===CHOSEN?closeDay():openDay(d);   // 選んだ候補をもう一度押すと閉じる
   });
+  if(CHOSEN) return;
+  // 候補を選んでいないときは、全員の自宅・会社と各日の駅を見渡す
+  RESULT=null; SEL=null; DETAIL=null;
+  MAP.getSource("routes").setData(empty());
+  paintStations(null);
   drawPins(); drawLegend(null);
   const b=new maplibregl.LngLatBounds();
   pinPoints().forEach(([lat,lon])=>b.extend([lon,lat]));
   if(!b.isEmpty()) MAP.fitBounds(b,{padding:60,duration:0,maxZoom:12});
 }
+function closeDay(){CHOSEN=null;SELP=null;layout();showDays()}
+$("#closeP").onclick=closeDay;
+$("#closeD").onclick=()=>selectPerson(SELP);
 
-/* ---------- 3. 駅を決める ---------- */
-$("#back").onclick=()=>go(2);
+/* 候補（日付と駅）を選ぶ */
+let OPENING=0;
 async function openDay(d){
-  CHOSEN=d;
+  const tok=++OPENING;
+  CHOSEN=d; SELP=null; layout();
+  $$(".day").forEach(el=>el.classList.toggle("hl",DAYS[+el.dataset.k]===d));
+  $("#banner").innerHTML=""; $("#detail").innerHTML=`<div class="tag" style="padding:8px">${d.best.name} の経路を組み立て中…</div>`;
   // 経路の表示は直前に検索した参加者で組むので、この日の参加者で検索し直す（読み込み済みなので速い）
   const j=await API.search({people:d.people,depart:DEPART,min_bars:BARS_OK,max_travel:MAX_TRAVEL});
-  RESULT=j; RESULT._people=d.people;
-  go(3);
-  $("#dayHead").innerHTML=`<div class="banner"><b>${dlabel(d.iso)}</b> の飲み会（${d.n}人）<br>
-    ${STATE.people.map((p,i)=>p.home.trim()?`<span class="mark m-${markOf(p,d.iso)}"><i style="background:${COLORS[i%COLORS.length]}"></i>${p.home}
-      ${{会:`${p.office}の会社から`,家:"自宅から","×":"行けない"}[markOf(p,d.iso)]}</span>`:"").join("")}</div>`;
-  SEL=null; FIT=true;
-  paintStations(j); drawPins(); drawLegend(null); render();
-  if(j.candidates.length) selectStation(j.candidates[0].name);
+  if(tok!==OPENING) return;
+  j._people=d.people; RESULT=j; SEL=d.best.name;
+  const r=j.all.find(x=>x.name===SEL);
+  const det=await API.detail({people:d.people,station:SEL,depart:j.depart});
+  if(tok!==OPENING) return;
+  if(det.error){$("#detail").innerHTML=`<div class="empty">${det.error}</div>`;return}
+  paintStations(j); FIT=true;
+  render(r); drawDetail(det); renderDetail(det,r);
+  if(window.innerWidth<=1100) $("#ppl").scrollIntoView({behavior:"smooth"});
 }
 
-function render(){
-  const j=RESULT,best=j.all.find(r=>r.name===SEL),n=j.people.length;
-  $("#list").innerHTML="";
-  $("#banner").innerHTML=best?`<div class="banner"><b>${dlabel(CHOSEN.iso)}</b> は <b>${best.name}</b> に集まります。
+function render(best){
+  const j=RESULT,n=j.people.length,d=CHOSEN;
+  $("#banner").innerHTML=`<div class="banner"><b>${dlabel(d.iso)}</b> は <b>${best.name}</b> に集まる（${d.n}人）<br>
     移動の合計 <b>${best.cost}分</b>（1人あたり ${Math.round(best.cost/n)}分）。<br>
     <span class="tag">行きは 19:00 に会社または自宅を出て、帰りは ${fmt(j.back_depart)} に飲み会の駅を出たときの所要時間です。
-    飲み屋 ${best.bars}軒${best.median_m?`・店まで中央値 ${best.median_m}m`:""}・${best.lines}路線。</span></div>`:"";
+    飲み屋 ${best.bars}軒${best.median_m?`・店まで中央値 ${best.median_m}m`:""}・${best.lines}路線。</span></div>`;
 }
 
-/* 2 の画面で決めた駅を開く */
-async function selectStation(name){
-  if(!RESULT) return;
-  const r=RESULT.all.find(x=>x.name===name);
-  if(!r){$("#detail").innerHTML=`<div class="empty">${name} は、全員が帰れる組み合わせがありません。</div>`;return}
-  SEL=name; SELP=null; render(); paintStations(RESULT);
-  $("#detail").innerHTML=`<div class="tag" style="padding:8px">${name} の経路を組み立て中…</div>`;
-  const d=await API.detail({people:RESULT._people,station:name,depart:RESULT.depart});
-  if(d.error){$("#detail").innerHTML=`<div class="empty">${d.error}</div>`;return}
-  drawDetail(d); renderDetail(d,r);
-}
-
-const legText=legs=>legs.length?legs.map(l=>`${l.line}（${l.stops[0].name}→${l.stops.slice(-1)[0].name}）`).join(" ／ "):"乗らない（同じ駅）";
+const legText=legs=>legs.length?legs.map(l=>l.line).join("→"):"移動なし（同じ駅）";
 function renderDetail(d,r){
   const j=RESULT;
-  $("#detail").innerHTML=`<h2 style="margin-top:14px">${r.name} に集まったら</h2>
+  $("#detail").innerHTML=`<h2>各人の移動</h2>
     <table><thead><tr><th>参加者</th><th>行き</th><th>帰り</th><th>計</th></tr></thead><tbody>
     ${j.people.map((p,k)=>`<tr><td>${p.name}</td>
       <td>${p.where.replace("駅","")} ${r.times[k]}分</td><td>${r.back[k]<0?"-":r.back[k]+"分"}</td>
       <td>${r.back[k]<0?"-":r.times[k]+r.back[k]+"分"}</td></tr>`).join("")}
     <tr><td><b>合計</b></td><td>${r.sum}分</td><td>${r.cost==null?"-":r.cost-r.sum+"分"}</td><td><b>${r.cost==null?"-":r.cost+"分"}</b></td></tr>
     </tbody></table>
-    ${r.cost==null?`<div class="tag">飲み屋が少ない駅なので、帰りの所要時間は計算していません。</div>`:""}
-    <h2 style="margin-top:12px">各人の経路 <span class="tag">（押すと地図で強調）</span></h2>
+    <h2 style="margin-top:12px">人を選ぶと乗り換えと経路が出ます</h2>
     ${d.routes.map((x,i)=>`<div class="who${SELP===i?" on":""}" data-i="${i}" style="--pc:${pcol(i)}">
         <div style="font-size:13px"><i class="dot"></i><b>${x.name}</b>
-          <span class="tag">終電 ${x.limit_s}</span></div>
-        <div class="tag"><b>行き</b> ${x.origin}（${x.from==="office"?"会社":"自宅"}）19:00 発 ${r.times[i]}分：${legText(x.go)}</div>
-        <div class="tag"><b>帰り</b> 21:30 発 ${r.back[i]<0?"-":r.back[i]+"分"}：${legText(x.back)}</div>
+          <span class="tag">${x.from==="office"?`${x.origin}の会社から`:"自宅から"}・計 ${r.times[i]+Math.max(r.back[i],0)}分</span></div>
+        <div class="tag"><b>行き</b> ${r.times[i]}分：${legText(x.go)}</div>
+        <div class="tag"><b>帰り</b> ${r.back[i]<0?"-":r.back[i]+"分"}：${legText(x.back)}</div>
       </div>`).join("")}`;
-  $$(".who").forEach(el=>el.onclick=()=>{
-    const i=+el.dataset.i; SELP=SELP===i?null:i;      // もう一度押すと解除
-    $$(".who").forEach(w=>w.classList.toggle("on",+w.dataset.i===SELP));
-    drawDetail(DETAIL);
-  });
+  $$(".who").forEach(el=>el.onclick=()=>selectPerson(+el.dataset.i));
+}
+
+/* 人を選ぶ（もう一度押すと解除）。右端にその人の乗り換えを出し、地図でその人の経路を強調する */
+function selectPerson(i){
+  SELP=SELP===i?null:i;
+  $$(".who").forEach(w=>w.classList.toggle("on",+w.dataset.i===SELP));
+  layout(); FIT=true;
+  if(SELP!=null) renderPerson();
+  drawDetail(DETAIL);
+  if(SELP!=null&&window.innerWidth<=1100) $("#person").scrollIntoView({behavior:"smooth"});
+}
+function renderPerson(){
+  const x=DETAIL.routes[SELP], r=RESULT.all.find(v=>v.name===SEL);
+  const timeOf=s=>s&&s.time!=null?`<span class="tag">${typeof s.time==="number"?fmt(s.time):s.time}</span> `:"";   // 時刻はサーバ版だけ（静的版は時刻表を配らないので無い）
+  const timeline=(legs,from,to)=>{
+    if(!legs.length) return `<div class="tag">同じ駅なので移動はありません。</div>`;
+    const trains=legs.filter(l=>l.kind!=="walk").length;
+    let h=`<div class="stn">${timeOf(legs[0].stops[0])}${from}</div>`;
+    legs.forEach((l,k)=>{
+      const n=l.stops.length-1, last=l.stops[n];
+      h+=l.kind==="walk"?`<div class="ride walk">徒歩で ${last.name} へ</div>`
+        :`<div class="ride"><b>${l.line}</b>（${n}駅）</div>`;
+      const end=k===legs.length-1;
+      h+=`<div class="stn">${timeOf(last)}${end?to:last.name}</div>`;
+      if(!end&&l.kind!=="walk"&&legs[k+1].kind!=="walk") h+=`<div class="xfer">乗り換え</div>`;
+    });
+    return {h,trains};
+  };
+  const go=timeline(x.go,`${x.origin}（${x.from==="office"?"会社":"自宅"}）`,`${SEL}（飲み会）`);
+  const bk=timeline(x.back,`${SEL}（飲み会）`,`${x.home}（自宅）`);
+  const sub=(t,m)=>typeof t==="string"?"移動なし":`${m}分・乗り換え ${Math.max(t.trains-1,0)}回`;
+  $("#pdetail").innerHTML=`<div style="--pc:${pcol(SELP)}">
+    <h2><i class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--pc);margin-right:5px"></i>${x.name} さんの移動</h2>
+    <div class="trip"><h3>行き <span class="tag">19:00 発・${sub(go,r.times[SELP])}</span></h3>
+      ${typeof go==="string"?go:`<div class="tl">${go.h}</div>`}</div>
+    <div class="trip"><h3>帰り <span class="tag">${fmt(RESULT.back_depart)} 発・${r.back[SELP]<0?"-":sub(bk,r.back[SELP])}</span></h3>
+      ${typeof bk==="string"?bk:`<div class="tl">${bk.h}</div>`}</div>
+    <div class="tag">${SEL} から ${x.home} への終電は <b>${x.limit_s}</b> です。</div></div>`;
 }
 boot();
 </script>

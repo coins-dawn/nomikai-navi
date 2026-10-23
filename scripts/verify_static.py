@@ -59,9 +59,9 @@ async def static_top():
         await pg.goto(STATIC_URL, wait_until="networkidle")
         await pg.click("#sample")
         await pg.wait_for_timeout(1200)
-        await pg.click("#compare")                 # 2. 日付を比べる
+        await pg.click("#compare")                 # 2. 日付と駅を比べる
         await pg.wait_for_selector(".day", timeout=60000)
-        await pg.locator(".day").first.click()      # 3. いちばん移動が少ない日の駅選び
+        await pg.locator(".day").first.click()      # いちばん移動が少ない候補を開く
         await pg.wait_for_selector(".who", timeout=60000)
         await pg.wait_for_timeout(5000)
         rows = await pg.evaluate("() => RESULT.candidates.map(c => [c.name, c.cost, c.min_limit, c.min_stay])")
