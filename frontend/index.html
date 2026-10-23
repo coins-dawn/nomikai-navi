@@ -167,14 +167,19 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
 .who .acc{display:none;cursor:default;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
 .who.on .acc{display:block}
 .who .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--pc);margin-right:5px}
-/* 経路の上を動く人（行き＝スキップ、帰り＝千鳥足）。線の少し上に浮かせる */
-.walker{pointer-events:none;width:38px;height:38px;position:relative}
+/* 選んだ人のキャラクター（会社で仕事中 → 行き＝スキップ → 乾杯 → 帰り＝千鳥足）。線の少し上に浮かせる */
+.walker{pointer-events:none;width:38px;height:38px}
 .walker i{position:absolute;left:50%;bottom:-2px;width:18px;height:6px;margin-left:-9px;border-radius:50%;background:var(--wc);opacity:.9;
   box-shadow:0 0 0 1.5px #fff}
 .walker span{display:block;width:100%;height:100%;filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #fff) drop-shadow(0 1px 1px rgba(0,0,0,.25))}
 .walker span svg{width:100%;height:100%;display:block}
 .walker.go span{animation:hop .42s ease-out infinite alternate}
 .walker.back span{animation:sway 1.6s ease-in-out infinite;transform-origin:50% 100%}
+.walker.stay{width:40px;height:40px}
+.walker.drink span{animation:cheers 1.2s ease-in-out infinite;transform-origin:50% 100%}
+.walker.work span{animation:type .18s steps(2) infinite alternate}
+@keyframes cheers{0%,60%,100%{transform:rotate(0)}75%{transform:rotate(8deg) translateY(-3px)}88%{transform:rotate(-3deg)}}
+@keyframes type{from{transform:translateY(0)}to{transform:translateY(-1.5px)}}
 @keyframes hop{from{transform:translateY(0)}to{transform:translateY(-7px)}}
 @keyframes sway{0%,100%{transform:rotate(-13deg) translateX(-2px)}50%{transform:rotate(13deg) translateX(2px)}}
 @media(prefers-reduced-motion:reduce){.walker span{animation:none!important}}
@@ -211,6 +216,8 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
 .lg-home,.lg-office,.lg-cand{display:inline-block;width:16px;height:16px;padding:2px;background:#77716a;border-radius:50%;flex:0 0 auto}
 .lg-office{border-radius:4px}
 .lg-cand{width:18px;height:18px;background:var(--accent)}
+.lg-ch{width:18px;height:18px;flex:0 0 auto}
+.lg-ch+.lg-ch,.lrow .lg-ch:not(:first-child){margin-left:8px}
 .lg-home svg,.lg-office svg,.lg-cand svg{width:100%;height:100%;display:block;fill:#fff}
 .maplibregl-popup-content{background:var(--panel);color:var(--fg);border:1px solid var(--line);box-shadow:0 2px 8px rgba(0,0,0,.12);
   border-radius:8px;font-size:12px;padding:7px 10px}
@@ -404,36 +411,58 @@ const empty=()=>({type:"FeatureCollection",features:[]});
 /* 経路の上を動く人のアイコン（このアプリのために描いたもの。2026-10-23 ユーザーが採用）。
    行き＝片膝を上げてスキップする人と音符、帰り＝ネクタイを頭に巻いて寿司の折り詰めを提げた千鳥足の酔っ払い */
 const WALK_ICON={go:`<svg viewBox="0 0 64 64"><g stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M25 33 L16 38" stroke="#4a3426" stroke-width="7"/><path d="M25 33 L16 38" stroke="#ffd9b8" stroke-width="3.6"/><path d="M29 45 L26 56" stroke="#4a3426" stroke-width="7.5"/><path d="M29 45 L26 56" stroke="#3d5a99" stroke-width="4"/><ellipse cx="24.5" cy="57" rx="4.2" ry="2.6" fill="#e2483d" stroke="#4a3426" stroke-width="2"/><path d="M23 31 Q32 26 41 31 L42 45 Q32 49 22 45 Z" fill="#7cc8f8" stroke="#4a3426" stroke-width="2.2"/><path d="M36 45 L44 43 L44 51" stroke="#4a3426" stroke-width="7.5"/><path d="M36 45 L44 43 L44 51" stroke="#3d5a99" stroke-width="4"/><ellipse cx="46" cy="52.5" rx="4.2" ry="2.6" fill="#e2483d" stroke="#4a3426" stroke-width="2"/><path d="M39 33 L47 25" stroke="#4a3426" stroke-width="7"/><path d="M39 33 L47 25" stroke="#ffd9b8" stroke-width="3.6"/></g><circle cx="32" cy="17" r="11.5" fill="#ffd9b8" stroke="#4a3426" stroke-width="2.2"/><path d="M20.6 16 Q21 4.6 32.5 4.8 Q44 4.8 43.4 15.5 Q39 10.5 33 11.3 Q30 14 25.5 13 Q23 14 20.6 16 Z" fill="#6b4226" stroke="#4a3426" stroke-width="2" stroke-linejoin="round"/><circle cx="25.2" cy="21.3" r="2.4" fill="#ff9eb0"/><circle cx="38.8" cy="21.3" r="2.4" fill="#ff9eb0"/><g fill="none" stroke="#4a3426" stroke-width="2" stroke-linecap="round"><path d="M26 18.6 q2 -2.6 4 0"/><path d="M34 18.6 q2 -2.6 4 0"/><path d="M29.6 22.4 q2.4 2.6 4.8 0"/></g><g fill="#ff8a00" stroke="#ff8a00" stroke-width="1.8" stroke-linecap="round"><ellipse cx="51.5" cy="15" rx="2.6" ry="2" transform="rotate(-20 51.5 15)" stroke="none"/><path d="M53.8 14.2 V6.5 Q56.5 7.5 58 10" fill="none"/></g></svg>`, back:`<svg viewBox="0 0 64 64"><g transform="rotate(-9 32 40)"><g stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M28 45 L34 56" stroke="#4a3426" stroke-width="7.5"/><path d="M28 45 L34 56" stroke="#5c6878" stroke-width="4"/><path d="M35 45 L28 56.5" stroke="#4a3426" stroke-width="7.5"/><path d="M35 45 L28 56.5" stroke="#5c6878" stroke-width="4"/><ellipse cx="35.5" cy="57.2" rx="4" ry="2.4" fill="#3a2a20" stroke="#4a3426" stroke-width="1.6"/><ellipse cx="26.5" cy="57.6" rx="4" ry="2.4" fill="#3a2a20" stroke="#4a3426" stroke-width="1.6"/><path d="M24 33 L16 25" stroke="#4a3426" stroke-width="7"/><path d="M24 33 L16 25" stroke="#ffc6a8" stroke-width="3.6"/></g><path d="M22 31 Q32 26 42 31 L43 46 Q32 49.5 21 46 Z" fill="#6f7d91" stroke="#4a3426" stroke-width="2.2" stroke-linejoin="round"/><path d="M28.5 29 L32 37 L35.5 29 Z" fill="#fff" stroke="#4a3426" stroke-width="1.6" stroke-linejoin="round"/><g stroke-linecap="round" stroke-linejoin="round"><path d="M40 33 L44 42" fill="none" stroke="#4a3426" stroke-width="7"/><path d="M40 33 L44 42" fill="none" stroke="#ffc6a8" stroke-width="3.6"/><path d="M44.5 43 V46" stroke="#4a3426" stroke-width="1.6"/><rect x="39.5" y="46" width="10.5" height="7.5" rx="1.2" fill="#fff8e8" stroke="#4a3426" stroke-width="1.8"/><path d="M44.7 46 V53.5 M39.5 49.7 H50" stroke="#e2483d" stroke-width="1.6"/></g><circle cx="31" cy="17" r="11.5" fill="#ffc6a8" stroke="#4a3426" stroke-width="2.2"/><path d="M19.8 14.5 Q21 5 31.5 5 Q42 5 42.4 14 Q36 10.5 31 11 Q25 10.5 19.8 14.5 Z" fill="#3a2a20" stroke="#4a3426" stroke-width="2" stroke-linejoin="round"/><path d="M19.8 13.6 Q31 8.4 42.4 13 L42.6 16.2 Q31 11.6 19.9 16.8 Z" fill="#e2483d" stroke="#4a3426" stroke-width="1.8" stroke-linejoin="round"/><path d="M42 14 L51 9.5 L49.5 13.6 L53 16.5 L43 16 Z" fill="#e2483d" stroke="#4a3426" stroke-width="1.8" stroke-linejoin="round"/><ellipse cx="24" cy="21.8" rx="3.4" ry="2.4" fill="#ff6f7d" opacity=".75"/><ellipse cx="38" cy="21.8" rx="3.4" ry="2.4" fill="#ff6f7d" opacity=".75"/><g fill="none" stroke="#4a3426" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M24.5 16.6 l3.2 1.8 l-3.2 1.8"/><path d="M37.5 16.6 l-3.2 1.8 l3.2 1.8"/><path d="M27.2 23.6 q1.5 -1.6 3 0 q1.5 1.6 3 0"/></g></g><g fill="#fff" stroke="#7cc8f8" stroke-width="1.5"><circle cx="13" cy="12" r="2.6"/><circle cx="9.5" cy="6.5" r="1.7"/></g></svg>`};
+/* 駅にとどまる人（同じ絵柄で描いたもの）。飲み会の駅＝ジョッキを掲げて乾杯する人、会社＝ノートパソコンに向かって汗をかいて働く人。
+   自宅には出さない（2026-10-23 ユーザー指示） */
+const STAY_ICON={drink:`<svg viewBox="0 0 64 64"><g stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M28 45 L27 56" stroke="#4a3426" stroke-width="7.5"/><path d="M28 45 L27 56" stroke="#5c6878" stroke-width="4"/><path d="M36 45 L37 56" stroke="#4a3426" stroke-width="7.5"/><path d="M36 45 L37 56" stroke="#5c6878" stroke-width="4"/><ellipse cx="25.5" cy="57.2" rx="4" ry="2.4" fill="#3a2a20" stroke="#4a3426" stroke-width="1.6"/><ellipse cx="38.5" cy="57.2" rx="4" ry="2.4" fill="#3a2a20" stroke="#4a3426" stroke-width="1.6"/><path d="M24 33 L17 39 L22 43" stroke="#4a3426" stroke-width="7"/><path d="M24 33 L17 39 L22 43" stroke="#ffc6a8" stroke-width="3.6"/></g><path d="M22 31 Q32 26 42 31 L43 46 Q32 49.5 21 46 Z" fill="#fff" stroke="#4a3426" stroke-width="2.2" stroke-linejoin="round"/><path d="M31 30 L34 30 L35 33 L37 42 L33.5 44 L32 34 Z" fill="#e2483d" stroke="#4a3426" stroke-width="1.6" stroke-linejoin="round"/><g stroke-linecap="round" fill="none"><path d="M40 33 L46 24" stroke="#4a3426" stroke-width="7"/><path d="M40 33 L46 24" stroke="#ffc6a8" stroke-width="3.6"/></g><path d="M55.5 13.5 Q61 13.5 61 18 Q61 22.5 55.5 22.5" fill="none" stroke="#4a3426" stroke-width="4.4" stroke-linecap="round"/><path d="M55.5 13.5 Q61 13.5 61 18 Q61 22.5 55.5 22.5" fill="none" stroke="#fff3c4" stroke-width="1.8" stroke-linecap="round"/><rect x="44" y="10" width="12.5" height="16" rx="2" fill="#f7b733" stroke="#4a3426" stroke-width="2"/><path d="M47.3 14 V23 M51.3 14 V23" stroke="#ffd877" stroke-width="1.6" stroke-linecap="round"/><path d="M43 11.5 Q42.5 6.5 46.5 7 Q48 3.6 51.5 5.4 Q55.5 3.8 57 7.6 Q59.5 9.5 57.5 11.5 Z" fill="#fff" stroke="#4a3426" stroke-width="1.8" stroke-linejoin="round"/><circle cx="45.5" cy="25" r="3" fill="#ffc6a8" stroke="#4a3426" stroke-width="1.8"/><circle cx="31" cy="17" r="11.5" fill="#ffc6a8" stroke="#4a3426" stroke-width="2.2"/><path d="M19.8 15.5 Q20 4.8 31.5 4.8 Q43 4.8 42.4 15 Q38 10.5 32 11.3 Q29 14 24.5 13 Q22 14 19.8 15.5 Z" fill="#3a2a20" stroke="#4a3426" stroke-width="2" stroke-linejoin="round"/><ellipse cx="23.8" cy="21.5" rx="3.4" ry="2.4" fill="#ff6f7d" opacity=".75"/><ellipse cx="38.2" cy="21.5" rx="3.4" ry="2.4" fill="#ff6f7d" opacity=".75"/><g fill="none" stroke="#4a3426" stroke-width="2" stroke-linecap="round"><path d="M24.5 18.6 q2 -2.6 4 0"/><path d="M33.5 18.6 q2 -2.6 4 0"/></g><path d="M27.8 21.6 Q31 21 34.2 21.6 Q33.8 26.6 31 26.6 Q28.2 26.6 27.8 21.6 Z" fill="#c8323a" stroke="#4a3426" stroke-width="1.8" stroke-linejoin="round"/><g stroke="#ff8a00" stroke-width="2" stroke-linecap="round"><path d="M40.5 5 L42 7.6"/><path d="M39.6 9.8 L36.8 9.2"/><path d="M60.5 3.5 L58.8 5.8"/></g></svg>`, work:`<svg viewBox="0 0 64 64"><path d="M20 33 Q32 27 44 33 L45 46 L19 46 Z" fill="#7cc8f8" stroke="#4a3426" stroke-width="2.2" stroke-linejoin="round"/><circle cx="32" cy="17" r="11.5" fill="#ffd9b8" stroke="#4a3426" stroke-width="2.2"/><path d="M20.6 16 Q21 4.6 32.5 4.8 Q44 4.8 43.4 15.5 Q39 10.5 33 11.3 Q30 14 25.5 13 Q23 14 20.6 16 Z" fill="#6b4226" stroke="#4a3426" stroke-width="2" stroke-linejoin="round"/><g fill="none" stroke="#4a3426" stroke-width="2" stroke-linecap="round"><path d="M24.8 15.4 L29.4 16.8"/><path d="M39.2 15.4 L34.6 16.8"/><path d="M30 23.6 Q32 22.4 34 23.6"/></g><circle cx="27.4" cy="19.6" r="1.8" fill="#4a3426"/><circle cx="36.6" cy="19.6" r="1.8" fill="#4a3426"/><circle cx="25" cy="22.6" r="2.2" fill="#ff9eb0" opacity=".8"/><circle cx="39" cy="22.6" r="2.2" fill="#ff9eb0" opacity=".8"/><path d="M47.5 8 Q50.8 12.8 50.8 14.6 A3.3 3.3 0 0 1 44.2 14.6 Q44.2 12.8 47.5 8 Z" fill="#7cc8f8" stroke="#4a3426" stroke-width="1.6" stroke-linejoin="round"/><rect x="5" y="46" width="54" height="5.5" rx="1.5" fill="#c98b4f" stroke="#4a3426" stroke-width="2"/><path d="M10 51.5 V59 M54 51.5 V59" stroke="#4a3426" stroke-width="3" stroke-linecap="round"/><path d="M19 30 L45 30 L44 45 L20 45 Z" fill="#b9c3d0" stroke="#4a3426" stroke-width="2" stroke-linejoin="round"/><circle cx="32" cy="37.5" r="2.4" fill="#e9eef4"/><path d="M15 45 L49 45 L50 47.5 L14 47.5 Z" fill="#8e99a8" stroke="#4a3426" stroke-width="1.8" stroke-linejoin="round"/><circle cx="17.5" cy="43" r="3" fill="#ffd9b8" stroke="#4a3426" stroke-width="1.8"/><circle cx="46.5" cy="43" r="3" fill="#ffd9b8" stroke="#4a3426" stroke-width="1.8"/><g stroke="#ff8a00" stroke-width="1.8" stroke-linecap="round"><path d="M10 38 L13 40"/><path d="M9 43 L12.6 43.2"/><path d="M54 38 L51 40"/><path d="M55 43 L51.4 43.2"/></g><path d="M6.5 39 H13.5 V44.5 Q13.5 46 12 46 H8 Q6.5 46 6.5 44.5 Z" fill="#fff" stroke="#4a3426" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 37 q-1.2 -1.6 0 -3.2 M11.4 37 q-1.2 -1.6 0 -3.2" fill="none" stroke="#9aa3ad" stroke-width="1.2" stroke-linecap="round"/></svg>`};
 let WALKERS=[], WALK_RAF=null;
 function clearWalkers(){WALKERS.forEach(w=>w.m.remove());WALKERS=[]}
-/* 行き（会社か自宅 → 飲み会の駅）と帰り（飲み会の駅 → 自宅）の経路に 1 人ずつ置き、線に沿って進ませる */
+/* 選んだ人 1 人のキャラクターが、会社で働く → スキップで飲み会の駅へ → 乾杯 → 千鳥足で自宅へ、を続けて演じて繰り返す
+   （行きと帰りを別々の人にすると、同じ人の 1 日に見えない。2026-10-23 ユーザー指示）。
+   自宅から来る人は仕事の場面を飛ばす。自宅には絵を出さず、着いたら消えて最初に戻る */
 function placeWalkers(d){
   clearWalkers();
-  d.routes.forEach((r,i)=>{
-    if(SELP!==i) return;   // 人を選んで経路を強調しているときだけ、その人に出す（全員ぶん出すと分かりにくい。2026-10-23 ユーザー指示）
-    [["go",r.go],["back",r.back]].forEach(([dir,legs])=>{
-      const pts=cleanLine(legs.flatMap(legCoords)).map(p=>[p[1],p[0]]);
-      if(pts.length<2) return;
-      const cum=[0]; for(let k=1;k<pts.length;k++) cum.push(cum[k-1]+Math.hypot(pts[k][0]-pts[k-1][0],(pts[k][1]-pts[k-1][1])));
-      if(cum[cum.length-1]<=0) return;
-      const el=document.createElement("div"); el.className=`walker ${dir}`; el.style.setProperty("--wc",pcol(i));
-      el.innerHTML=`<i></i><span>${WALK_ICON[dir]}</span>`;   // 足もとの楕円は参加者の色
-      // 線の真上だと見づらいので、足もとを線から少し上に浮かせる
-      const m=new maplibregl.Marker({element:el,anchor:"bottom",offset:[0,-5]}).setLngLat(pts[0]).addTo(MAP);
-      // 帰りは酔っているのでゆっくり。出発をずらして、人ごとに位置がばらけるようにする
-      WALKERS.push({m,pts,cum,dur:dir==="go"?11000:17000,phase:(i*.23+(dir==="go"?0:.5))%1});
-    });
-  });
+  const i=SELP; if(i==null||!d.routes[i]) return;
+  const r=d.routes[i], p=RESULT&&RESULT._people[i];
+  const path=legs=>{
+    const pts=cleanLine(legs.flatMap(legCoords)).map(q=>[q[1],q[0]]);
+    const cum=[0]; for(let k=1;k<pts.length;k++) cum.push(cum[k-1]+Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1]));
+    return pts.length>1&&cum[cum.length-1]>0?{pts,cum}:null;
+  };
+  const at=st=>{const g=st&&geoByName(st);return g?[g.lon,g.lat]:null};
+  const go=path(r.go), back=path(r.back), office=p&&p.from==="office"?at(p.office):null, bar=at(d.station);
+  // 駅にいる場面は目印の真上に立たせ、歩く場面は線から少し上に浮かせる。帰りは酔っているのでゆっくり
+  const scenes=[
+    office&&{k:"work",dur:2600,pos:office,dy:-14},
+    go&&{k:"go",dur:7000,...go,dy:-5},
+    bar&&{k:"drink",dur:3200,pos:bar,dy:-18},
+    back&&{k:"back",dur:10000,...back,dy:-5},
+    {k:"rest",dur:900,pos:back?back.pts[back.pts.length-1]:bar,dy:-5},
+  ].filter(Boolean);
+  const el=document.createElement("div"); el.style.setProperty("--wc",pcol(i));
+  const m=new maplibregl.Marker({element:el,anchor:"bottom"}).setLngLat(scenes[0].pos||scenes[0].pts[0]).addTo(MAP);
+  WALKERS.push({m,el,scenes,total:scenes.reduce((a,s)=>a+s.dur,0),cur:null,t0:performance.now()});
   if(!WALK_RAF) WALK_RAF=requestAnimationFrame(stepWalkers);
 }
 function stepWalkers(now){
   WALK_RAF=WALKERS.length?requestAnimationFrame(stepWalkers):null;
   const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
   WALKERS.forEach(w=>{
-    const L=w.cum[w.cum.length-1], f=still?.5:((now/w.dur+w.phase)%1), x=f*L;
-    let k=1; while(k<w.cum.length-1&&w.cum[k]<x) k++;
-    const a=w.pts[k-1], b=w.pts[k], t=(x-w.cum[k-1])/((w.cum[k]-w.cum[k-1])||1);
-    w.m.setLngLat([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);
+    // 動きを控える設定では、飲み会の駅で乾杯している場面で止めておく
+    let t=still?null:(now-w.t0)%w.total, s=w.scenes[0];
+    if(still) s=w.scenes.find(x=>x.k==="drink")||s;
+    else for(const x of w.scenes){if(t<x.dur){s=x;break} t-=x.dur}
+    if(w.cur!==s){
+      w.cur=s;
+      const moving=s.k==="go"||s.k==="back", icon=moving?WALK_ICON[s.k]:STAY_ICON[s.k];
+      w.el.className=`walker ${s.k}${moving?"":" stay"}`;
+      w.el.innerHTML=s.k==="rest"?"":`${moving?"<i></i>":""}<span>${icon}</span>`;   // 歩くときは足もとに参加者の色の楕円
+      w.m.setOffset([0,s.dy]);
+    }
+    if(s.pos){w.m.setLngLat(s.pos);return}
+    const L=s.cum[s.cum.length-1], x=(still?.5:t/s.dur)*L;
+    let k=1; while(k<s.cum.length-1&&s.cum[k]<x) k++;
+    const a=s.pts[k-1], b=s.pts[k], f=(x-s.cum[k-1])/((s.cum[k]-s.cum[k-1])||1);
+    w.m.setLngLat([a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f]);
   });
 }
 
@@ -557,8 +586,8 @@ function drawLegend(d){
     <div class="lrow"><span class="lg-office">${ICON.office}</span> 会社の最寄り駅</div>
     ${d?`<hr><h3>${d.station} への行きと帰り</h3>
     ${d.routes.map((r,i)=>`<div class="lrow"><s style="background:${pcol(i)};height:4px"></s> ${r.name}</div>`).join("")}
-    ${SELP!=null?`<div class="lrow"><span style="width:18px;height:18px">${WALK_ICON.go}</span> 行き（スキップ）</div>
-    <div class="lrow"><span style="width:18px;height:18px">${WALK_ICON.back}</span> 帰り（千鳥足）</div>`:""}
+    ${SELP!=null?`<div class="lrow">${RESULT._people[SELP]&&RESULT._people[SELP].from==="office"?`<span class="lg-ch">${STAY_ICON.work}</span> 仕事中 `:""}<span class="lg-ch">${WALK_ICON.go}</span> 行き</div>
+    <div class="lrow"><span class="lg-ch">${STAY_ICON.drink}</span> 乾杯 <span class="lg-ch">${WALK_ICON.back}</span> 帰り</div>`:""}
     <p class="tag" style="font-size:10px">細い線＝行き（19:00 発）、太い線＝帰り（21:30 発）。点線は徒歩。
     一覧で人を選ぶと、その人の経路が強調されます。</p>`:""}`;
 }
