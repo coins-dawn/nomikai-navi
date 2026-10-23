@@ -15,7 +15,7 @@
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--fg);overflow:hidden;
+body{margin:0;background:var(--bg);color:var(--fg);overflow:hidden;display:flex;flex-direction:column;
   font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",Meiryo,sans-serif;line-height:1.55}
 header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
   background:var(--bg)}
@@ -23,7 +23,8 @@ h1{margin:0;font-size:17px;letter-spacing:.01em;display:flex;align-items:center;
 .beer{}
 h1 span{color:var(--accent-ink)}
 .sub{color:var(--muted);font-size:12px}
-.app{display:grid;grid-template-columns:330px 1fr;height:calc(100vh - 50px)}
+.app{display:grid;grid-template-columns:330px 1fr;flex:1;min-height:0}
+.app[hidden],#step1[hidden]{display:none}
 .app.has-result{grid-template-columns:330px 1fr 380px}
 #result{display:none;border-right:none;border-left:1px solid var(--line)}
 .app.has-result #result{display:block}
@@ -31,7 +32,7 @@ h1 span{color:var(--accent-ink)}
 .pane h2{margin:0 0 8px;font-size:12px;color:var(--muted);letter-spacing:.05em}
 #map{width:100%;height:100%}
 @media(max-width:1100px){
-  body{overflow:auto}
+  body{overflow:auto;display:block}
   .app,.app.has-result{grid-template-columns:1fr;height:auto}
   .pane{border-right:none;border-left:none;border-bottom:1px solid var(--line);max-height:none}
   #mapwrap{height:60vh}
@@ -94,6 +95,58 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 .mk{width:11px;height:11px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
 .mk.sta{width:17px;height:17px;background:#fff;border:4px solid var(--accent);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
 .mk.bar{width:7px;height:7px;border-width:1px}
+/* 3 つの段階（予定を入れる → 日付を比べる → 駅を決める） */
+.steps{display:flex;gap:4px;margin-left:auto}
+.steps button{border:none;background:none;color:var(--muted);font-size:12.5px;padding:5px 10px;border-radius:99px}
+.steps button b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--panel2);
+  border:1px solid var(--line);font-size:11px;margin-right:4px}
+.steps button.on{color:var(--fg);font-weight:700;background:var(--panel2)}
+.steps button.on b{background:var(--accent);border-color:var(--accent);color:#fff}
+.steps button:disabled{opacity:.4;cursor:default}
+@media(max-width:700px){.legend p{display:none}.legend{font-size:10px;bottom:30px}}
+@media(max-width:700px){.steps{margin-left:0;width:100%}.steps button{flex:1;padding:5px 2px;font-size:11.5px}}
+#step1{flex:1;overflow-y:auto;padding:16px}
+.s1wrap{max-width:760px;margin:0 auto}
+.s1wrap h2{margin:18px 0 6px;font-size:13px;color:var(--fg)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:99px;padding:3px 4px 3px 10px;
+  font-size:13px;background:var(--panel2)}
+.chip button{border:none;background:none;color:var(--muted);padding:0 5px;font-size:14px;line-height:1}
+.pr{display:grid;grid-template-columns:44px 1fr;gap:6px;align-items:center}
+.pr>label{font-size:11px;color:var(--muted)}
+.wk,.dd{display:flex;flex-wrap:wrap;gap:4px}
+.wk button{width:34px;padding:4px 0;font-size:12px;color:var(--muted);background:var(--bg)}
+.wk button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.dd button{font-size:12px;padding:4px 7px;background:var(--bg);color:var(--fg)}
+.dd button em{font-style:normal;font-weight:700;margin-left:3px}
+.dd button.m-会{background:var(--accent);border-color:var(--accent);color:#fff}
+.dd button.m-家{background:#e7f4ee;border-color:#9fd3bb;color:#0b6b49}
+.dd button.m-×{background:var(--panel2);color:#a8a29a;text-decoration:line-through}
+.dd button.ov{box-shadow:inset 0 -2px 0 rgba(0,0,0,.35)}
+.mark{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:1px 6px 1px 4px;border-radius:99px;
+  border:1px solid var(--line);background:#fff;margin:2px 3px 0 0;white-space:nowrap}
+.mark i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.mark.m-会{border-color:#f0c27a;background:#fff4e2}
+.mark.m-家{border-color:#9fd3bb;background:#eef8f3}
+.mark.m-×{color:#a8a29a;text-decoration:line-through}
+.day{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.day:hover,.day.hl{border-color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.day .top{display:flex;align-items:baseline;gap:8px}
+.day .dt{font-size:16px;font-weight:700}
+.day .att{font-size:11px;color:var(--muted)}
+.day .per{margin-left:auto;text-align:right}
+.day .per b{font-size:18px;color:var(--accent2)}
+.day .per div{font-size:10px;color:var(--muted)}
+.day .st{font-size:13px;margin:2px 0 4px}
+.day .st b{color:var(--accent-ink)}
+.day .diff{font-size:11px;color:var(--warn);margin-left:6px}
+.day .diff.best{color:var(--accent2)}
+.day.first{border-color:var(--accent);background:#fff8ec}
+.back{background:none;border:none;color:var(--accent-ink);padding:0 0 8px;font-size:13px}
+.pin.p-date{flex-direction:column;gap:2px}
+.pin.p-date span{background:var(--accent);color:#fff;text-align:center;line-height:1.35;padding:3px 6px;font-size:12px}
+.pin.p-date span small{display:block;font-weight:600;font-size:10.5px;opacity:.95}
+.pin.p-date i{width:12px;height:12px;border-radius:50%;background:var(--accent)}
 /* 地図の目印（自宅・会社・候補駅）。印＋駅名のラベル */
 .pin{display:flex;align-items:center;gap:4px;pointer-events:auto;cursor:pointer}
 .pin i{flex:0 0 auto;display:block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
@@ -124,28 +177,55 @@ th{color:var(--muted);font-weight:600;font-size:10px}
       </g>
       <path d="M22 30h5v18h-5z" fill="#ffe3a8" opacity=".9"/>
     </svg></h1>
-  <div class="sub">平日の飲み会で、<b>会社から来る人</b>・<b>自宅から来る人</b>の<b>移動時間の合計がいちばん少ない駅</b>を探し、帰りの経路まで地図に描きます。</div>
+  <div class="sub">候補日ごとに、<b>会社から来る人</b>・<b>自宅から来る人</b>の<b>移動時間の合計がいちばん少ない駅</b>を探して比べます。</div>
+  <nav class="steps" id="steps">
+    <button data-s="1"><b>1</b>予定を入れる</button>
+    <button data-s="2"><b>2</b>日付を比べる</button>
+    <button data-s="3"><b>3</b>駅を決める</button>
+  </nav>
 </header>
 
-<div class="app">
-  <!-- 1. 設定 -->
-  <div class="pane">
-    <h2>参加者（平日の開催）</h2>
-    <div class="tag" style="margin-bottom:8px">会社から来る人は「会社→飲み会→自宅」、自宅から来る人（在宅勤務・休み）は「自宅→飲み会→自宅」の移動時間を数えます。</div>
+<!-- 1. 予定を入れる -->
+<section id="step1">
+  <div class="s1wrap">
     <div class="sample">
-      <button id="sample">サンプルの5人を入れる</button>
+      <button id="sample">サンプルを入れる（5人・6日）</button>
       <button id="clear">全部消す</button>
     </div>
+    <h2>候補日（平日）</h2>
+    <div class="row"><input type="date" id="dateIn"><button id="addDate">追加</button></div>
+    <div class="chips" id="dates"></div>
+    <h2>参加者</h2>
+    <div class="tag" style="margin-bottom:8px">自宅と会社の最寄り駅、出社する曜日を入れてください。候補日ごとの予定は曜日から決まり、
+      ボタンを押すと「会社から → 自宅から → 行けない」と切り替わります（変えた日は下線が付きます）。
+      会社から来る人は「会社→飲み会→自宅」、自宅から来る人（在宅勤務・休み）は「自宅→飲み会→自宅」の移動時間を数えます。</div>
     <div id="people"></div>
     <button class="ghost" id="add">＋ 参加者を追加</button>
-    <button class="primary" id="go">集合駅を探す</button>
+    <button class="primary" id="compare" style="margin-top:10px">日付を比べる</button>
     <div class="tag" id="status" style="margin-top:8px"></div>
+    <h2>使っているオープンデータ</h2>
+    <div class="tag credits"></div>
+  </div>
+</section>
+
+<div class="app" id="app" hidden>
+  <!-- 2・3 の左側 -->
+  <div class="pane" id="left">
+    <div id="step2pane">
+      <h2>候補日ごとの最適な駅</h2>
+      <div id="daysBanner"></div>
+      <div id="days"></div>
+    </div>
+    <div id="step3pane">
+      <button class="back" id="back">← 日付の比較に戻る</button>
+      <div id="dayHead"></div>
+    </div>
     <h2 style="margin-top:16px">使っているオープンデータ</h2>
-    <div class="tag" id="credits"></div>
+    <div class="tag credits"></div>
   </div>
 
   <!-- 2. 地図 -->
-  <div id="mapwrap" style="position:relative">
+  <div id="mapwrap" style="position:relative;overflow:hidden">
     <div id="map"></div>
     <div class="legend" id="legend" style="display:none"></div>
   </div>
@@ -172,7 +252,18 @@ const BARS_OK=30;      // これだけ飲み屋があれば「飲み会ができ
 const MAX_TRAVEL=90;   // 片道がこれを超える駅はおすすめに出さない（会場が遠くに引きずられるのを防ぐ）
 const MAPDIM="#ffffff";
 let META=null,RESULT=null,SEL=null,MAP=null,DETAIL=null,MARKERS=[],HOVER=null,GEO={},FIT=false;
-const SAMPLE=[["荻窪","大手町"],["川口",""],["西船橋","品川"],["蒲田",""],["聖蹟桜ヶ丘","新宿"]];   // [自宅, 会社（空なら自宅から）]
+/* サンプル: 5 人・候補日 6 日。week は月〜金の出社（1＝会社から）。over はその日だけの例外 */
+const SAMPLE={
+  dates:["2026-11-09","2026-11-10","2026-11-11","2026-11-12","2026-11-13","2026-11-17"],
+  people:[
+    {home:"荻窪",office:"大手町",week:[1,1,0,1,0],over:{}},
+    {home:"川口",office:"池袋",week:[0,1,1,0,0],over:{}},
+    {home:"西船橋",office:"品川",week:[1,0,1,1,0],over:{"2026-11-17":"会"}},
+    {home:"蒲田",office:"渋谷",week:[0,0,0,1,1],over:{"2026-11-13":"×"}},
+    {home:"聖蹟桜ヶ丘",office:"新宿",week:[1,1,0,0,0],over:{}},
+  ]};
+const WD="日月火水木金土";
+let STATE={dates:[],people:[]}, STEP=1, DAYS=null, CHOSEN=null;
 
 /* ---------- 地図 ---------- */
 function initMap(){
@@ -246,7 +337,7 @@ function drawDetail(d){
   DETAIL=d;
   const feats=[];
   d.routes.forEach((r,i)=>{
-    const color=COLORS[i%COLORS.length], tight=(i===d.tight);
+    const color=pcol(i), tight=(i===d.tight);
     r.legs.forEach(l=>{
       const co=(l.shape||legShape(l.rw,l.a,l.b)||l.stops.map(s=>[s.lat,s.lon])).map(p=>[p[1],p[0]]);
       if(co.length<2) return;
@@ -267,10 +358,25 @@ function drawDetail(d){
 /* 自宅（丸）・会社（四角）は参加者の色、候補駅は順位入りのオレンジ。選んだ候補は大きく */
 const geoByName=n=>META.geo.find(s=>s.n===n);
 function pinList(){
-  if(!RESULT) return [];
   const out=[];
+  if(STEP===2&&DAYS){
+    // 全員の自宅と（いれば）会社、各日の最適な駅に日付のラベル
+    STATE.people.forEach((p,i)=>{
+      const c=COLORS[i%COLORS.length];
+      if(p.home.trim()) out.push({kind:"home",st:p.home.trim(),color:c,label:`${p.home.trim()}（自宅）`});
+      if(p.office.trim()) out.push({kind:"office",st:p.office.trim(),color:c,label:`${p.office.trim()}（会社）`});
+    });
+    const by={};
+    DAYS.forEach(d=>{if(d.best)(by[d.best.name]||=[]).push(d)});
+    Object.entries(by).forEach(([st,ds])=>out.push({kind:"date",st,label:st,
+      // 狭い画面では日付を並べると隣の札と重なるので日数だけ（日付は上のカードにある）
+      html:MAP.getContainer().clientWidth<600?`${st}<small>${ds.length}日</small>`
+        :`${st}${ds.map(d=>`<small>${dlabel(d.iso)}</small>`).join("")}`}));
+    return out;
+  }
+  if(!RESULT) return out;
   RESULT._people.forEach((p,i)=>{
-    const c=COLORS[i%COLORS.length];
+    const c=pcol(i);
     out.push({kind:"home",st:p.station,color:c,label:`${p.station}（自宅）`});
     if(p.from==="office") out.push({kind:"office",st:p.office,color:c,label:`${p.office}（会社）`});
   });
@@ -291,11 +397,16 @@ function drawPins(){
     el.className=`pin p-${x.kind}${sel?" sel":""}`;
     el.title=x.label;
     // 候補は都心に固まるので、名前を出すのは選んだ駅だけ（ほかは一覧と同じ番号）
-    el.innerHTML=x.kind==="cand"?`<i>${x.rank}</i>${sel?`<span>${x.label}</span>`:""}`
+    if(x.kind==="date") el.onclick=()=>{const d=DAYS.find(d=>d.best&&d.best.name===x.st);if(d)openDay(d)};
+    el.innerHTML=x.kind==="date"?`<span>${x.html}</span><i></i>`
+      :x.kind==="cand"?`<i>${x.rank}</i>${sel?`<span>${x.label}</span>`:""}`
       :`<i style="background:${x.color}"></i><span>${x.label}</span>`;
     if(x.kind==="cand") el.onclick=e=>{e.stopPropagation();selectStation(x.st)};
     const k=g.id+x.kind; const n=at[k]=(at[k]||0)+1;
-    const m=new maplibregl.Marker({element:el,anchor:"left",offset:[-8,(n-1)*16]}).setLngLat([g.lon,g.lat]);
+    // 日付の札は点の上に立てる（横に長いと隣の駅の札と重なるので縦に積む）
+    const m=x.kind==="date"?new maplibregl.Marker({element:el,anchor:"bottom",offset:[0,8]}).setLngLat([g.lon,g.lat])
+      :new maplibregl.Marker({element:el,anchor:"left",offset:[-8,(n-1)*16]}).setLngLat([g.lon,g.lat]);
+    if(x.kind==="date") el.style.zIndex=3;
     if(x.kind==="cand"&&x.st===SEL) el.style.zIndex=3; else if(x.kind==="cand") el.style.zIndex=2;
     m.addTo(MAP); MARKERS.push(m);
   });
@@ -304,14 +415,16 @@ function drawPins(){
 /* 凡例: 上段＝駅の色の意味（逐次スケール）／下段＝選んだ駅の中身 */
 function drawLegend(d){
   const L=$("#legend"); L.style.display="";
-  if(!RESULT){L.innerHTML=`<h3>関東の鉄道</h3>
-    <p class="tag">参加者を入れて「集合駅を探す」を押すと、各人の自宅・会社と候補の駅が地図に出ます。
-    候補をクリックすると、その駅に集まった場合の各人の帰り方が出ます。</p>`;return}
+  if(STEP===2){L.innerHTML=`<div class="lrow"><span class="mark" style="background:var(--accent);color:#fff;border:none">駅：日付</span> その日の最適な駅</div>
+    <div class="lrow"><span class="lg-home"></span> 自宅の最寄り駅</div>
+    <div class="lrow"><span class="lg-office"></span> 会社の最寄り駅</div>
+    <p class="tag" style="font-size:10px">日付のカードか地図のラベルを押すと、その日の駅選びに進みます。</p>`;return}
+  if(!RESULT){L.innerHTML=`<h3>関東の鉄道</h3>`;return}
   L.innerHTML=`<div class="lrow"><span class="lg-cand">1</span> 候補の駅（移動の合計が少ない順）</div>
     <div class="lrow"><span class="lg-home"></span> 自宅の最寄り駅</div>
     <div class="lrow"><span class="lg-office"></span> 会社の最寄り駅</div>
     ${d?`<hr><h3>${d.station} からの帰り道</h3>
-    ${d.routes.map((r,i)=>`<div class="lrow"><s style="background:${i===d.tight?"#f08a00":COLORS[i%COLORS.length]};
+    ${d.routes.map((r,i)=>`<div class="lrow"><s style="background:${i===d.tight?"#f08a00":pcol(i)};
       height:${i===d.tight?5:3}px"></s> ${r.name} ${r.limit_s}${i===d.tight?" ← 一番早い":""}</div>`).join("")}
     <p class="tag" style="font-size:10px">点線は徒歩</p>`:""}`;
 }
@@ -360,22 +473,24 @@ function paintStations(res){
 }
 
 /* ---------- 入力 ---------- */
+let MAPREADY=null;
 async function boot(){
   initMap();
   META=await API.meta();
   GEO=Object.fromEntries(META.geo.map(s=>[s.id,s]));
-  const ready=()=>MAP.isStyleLoaded()&&MAP.getSource("rails");
-  await new Promise(r=>{const t=setInterval(()=>{if(ready()){clearInterval(t);r()}},120)});
-  drawNetwork(); drawLegend(null);
   const on=new Set(); META.rails.forEach(r=>r.o.forEach(n=>on.add(n)));
   $("#stations").innerHTML=META.geo.filter(s=>on.has(s.id)).map(s=>`<option value="${s.n}">`).join("");
   DEPART=META.presets.includes(19*60)?19*60:META.presets[0];
-  credits();
+  credits(); renderDates(); renderPeople(); go(1);
+  // 地図は 1 の画面では隠れているので、裏で準備しておき 2 に進むときに待つ
+  const ready=()=>MAP.isStyleLoaded()&&MAP.getSource("rails");
+  MAPREADY=new Promise(r=>{const t=setInterval(()=>{if(ready()){clearInterval(t);r()}},120)})
+    .then(()=>{drawNetwork(); drawLegend(null)});
 }
 // 開発者ガイドライン 3.1 が求める 3 点（提供元・無保証・問い合わせ先）と、静的データの取得日
 function credits(){
   const a=META.acquired||{}, c=META.contact||{};
-  $("#credits").innerHTML=`
+  $$(".credits").forEach(el=>el.innerHTML=`
     このアプリは<b>公共交通オープンデータセンター</b>で提供されるデータを利用しています
     （鉄道10事業者65路線の列車時刻表・駅情報・ラインカラー）。
     データの<b>正確性・完全性が保証されたものではありません</b>。実際の運行とは異なる場合があります。
@@ -384,57 +499,164 @@ function credits(){
     <br>静的データの取得日: 鉄道 ${a.odpt||"-"} / OpenStreetMap ${a.osm||"-"}
     （この画面の計算結果は ${META.built||"-"} 時点）。
     <br>飲み屋の位置と線路の形は OpenStreetMap（ODbL）。
-    地図 © OpenFreeMap © OpenMapTiles © OpenStreetMap contributors。`;
+    地図 © OpenFreeMap © OpenMapTiles © OpenStreetMap contributors。`);
 }
-function addPerson(station="",office=null){
-  const d=document.createElement("div"); d.className="person";
-  d.innerHTML=`<span class="dot"></span>
-    <div class="fields">
-      <div class="seg"><button data-m="office">会社から</button><button data-m="home">自宅から</button></div>
-      <input type="text" class="of" list="stations" placeholder="会社の最寄り駅" value="${office||""}">
-      <input type="text" class="st" list="stations" placeholder="自宅の最寄り駅" value="${station}">
-    </div>
-    <button class="del" title="消す">×</button>`;
-  $("#people").appendChild(d);
-  const mode=m=>{d.classList.toggle("home",m==="home");
-    d.querySelectorAll(".seg button").forEach(b=>b.classList.toggle("on",b.dataset.m===m))};
-  d.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>mode(b.dataset.m));
-  mode(office===""?"home":"office");
-  d.querySelector(".del").onclick=()=>{d.remove();recolor()};
-  recolor();
-  return d;
+/* ---------- 1. 予定を入れる ---------- */
+const dlabel=iso=>{const d=new Date(iso+"T00:00");return `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`};
+const wday=iso=>new Date(iso+"T00:00").getDay();            // 1〜5 が月〜金
+/* その人のその日の予定: 例外があればそれ、なければ曜日の出社パターン。会社が空なら自宅から */
+function markOf(p,iso){
+  if(p.over[iso]) return p.over[iso]==="会"&&!p.office.trim()?"家":p.over[iso];
+  return p.office.trim()&&p.week[wday(iso)-1]?"会":"家";
 }
-function recolor(){$$(".person").forEach((d,i)=>d.querySelector(".dot").style.background=COLORS[i%COLORS.length])}
-$("#add").onclick=()=>addPerson();
-$("#clear").onclick=()=>{$("#people").innerHTML="";$(".app").classList.remove("has-result")};
-$("#sample").onclick=()=>{$("#people").innerHTML="";SAMPLE.forEach(([st,of])=>addPerson(st,of))};
+function stale(){DAYS=null;CHOSEN=null;steps()}
+function steps(){
+  $$("#steps button").forEach(b=>{
+    const k=+b.dataset.s;
+    b.classList.toggle("on",k===STEP);
+    b.disabled=(k===2&&!DAYS)||(k===3&&!CHOSEN);
+  });
+}
+function go(k){
+  STEP=k; steps();
+  $("#step1").hidden=k!==1; $("#app").hidden=k===1;
+  $("#step2pane").hidden=k!==2; $("#step3pane").hidden=k!==3;
+  $("#app").classList.toggle("has-result",k===3);
+  if(k!==1){MAP.resize();FIT=true}
+  if(k===2) showDays();
+  window.scrollTo(0,0);
+}
+$$("#steps button").forEach(b=>b.onclick=()=>{if(b.disabled) return; +b.dataset.s===3?openDay(CHOSEN):go(+b.dataset.s)});
 
-function collect(){
-  return $$(".person").map(d=>{
-    const station=d.querySelector(".st").value.trim(), office=d.querySelector(".of").value.trim();
-    if(!station) return null;
-    return d.classList.contains("home")?{station,from:"home"}:{station,from:"office",office};
-  }).filter(Boolean);
+function renderDates(){
+  $("#dates").innerHTML=STATE.dates.length?STATE.dates.map(d=>`<span class="chip">${dlabel(d)}<button data-d="${d}" title="外す">×</button></span>`).join("")
+    :`<span class="tag">まだありません。日付を選んで「追加」を押してください。</span>`;
+  $$("#dates button").forEach(b=>b.onclick=()=>{STATE.dates=STATE.dates.filter(x=>x!==b.dataset.d);stale();renderDates();renderPeople()});
 }
-
-$("#go").onclick=async()=>{
-  const people=collect();
-  if(people.length<2){$("#status").textContent="自宅の最寄り駅を 2 つ以上入れてください。";return}
-  if(people.some(p=>p.from==="office"&&!p.office)){$("#status").textContent="「会社から」の人は会社の最寄り駅も入れてください。";return}
-  $("#status").textContent="計算中…";
-  const j=await API.search({people,depart:DEPART,
-    min_bars:BARS_OK,max_travel:MAX_TRAVEL});
-  if(j.error){$("#status").textContent="エラー: "+j.error;return}
-  RESULT=j; RESULT._people=people; SEL=0;
-  $("#status").textContent=`候補 ${j.n_ok} 駅 / 全員が行ける ${j.n_all} 駅`;
-  $(".app").classList.add("has-result");
-  MAP.resize();
-  SEL=null; FIT=true;
-  paintStations(j);
-  drawPins(); drawLegend(null);
-  render();
-  if(j.candidates.length) selectStation(j.candidates[0].name);
+$("#addDate").onclick=()=>{
+  const v=$("#dateIn").value;
+  if(!v) return;
+  if(wday(v)===0||wday(v)===6){$("#status").textContent="平日を選んでください（時刻表は平日ダイヤだけ入っています）。";return}
+  if(!STATE.dates.includes(v)){STATE.dates.push(v);STATE.dates.sort()}
+  $("#status").textContent=""; stale(); renderDates(); renderPeople();
 };
+
+function renderPeople(){
+  $("#people").innerHTML=STATE.people.map((p,i)=>`<div class="person" data-i="${i}">
+    <span class="dot" style="background:${COLORS[i%COLORS.length]}"></span>
+    <div class="fields">
+      <div class="pr"><label>自宅</label><input type="text" class="st" list="stations" placeholder="自宅の最寄り駅" value="${p.home}"></div>
+      <div class="pr"><label>会社</label><input type="text" class="of" list="stations" placeholder="会社の最寄り駅（なければ空のまま）" value="${p.office}"></div>
+      <div class="pr"><label>出社</label><div class="wk">${[..."月火水木金"].map((w,k)=>
+        `<button class="${p.week[k]?"on":""}" data-k="${k}">${w}</button>`).join("")}</div></div>
+      <div class="pr"><label>候補日</label><div class="dd">${STATE.dates.map(d=>{const m=markOf(p,d);
+        return `<button class="m-${m}${p.over[d]?" ov":""}" data-d="${d}">${dlabel(d)}<em>${{会:"会社",家:"自宅","×":"×"}[m]}</em></button>`}).join("")
+        ||'<span class="tag">候補日を追加すると、日ごとの予定が出ます</span>'}</div></div>
+    </div>
+    <button class="del" title="消す">×</button></div>`).join("");
+  $$("#people .person").forEach(el=>{
+    const p=STATE.people[+el.dataset.i];
+    const redraw=()=>{stale();renderPeople()};
+    el.querySelector(".st").oninput=e=>{p.home=e.target.value;stale()};
+    el.querySelector(".of").oninput=e=>{p.office=e.target.value;stale()};
+    el.querySelector(".of").onchange=redraw;     // 会社の有無で日ごとの予定が変わる
+    el.querySelectorAll(".wk button").forEach(b=>b.onclick=()=>{p.week[+b.dataset.k]^=1;redraw()});
+    el.querySelectorAll(".dd button").forEach(b=>b.onclick=()=>{
+      const d=b.dataset.d, order=p.office.trim()?["会","家","×"]:["家","×"];
+      const next=order[(order.indexOf(markOf(p,d))+1)%order.length];
+      // 曜日パターンどおりに戻ったら例外を消す
+      delete p.over[d]; if(markOf(p,d)!==next) p.over[d]=next;
+      redraw();
+    });
+    el.querySelector(".del").onclick=()=>{STATE.people.splice(+el.dataset.i,1);redraw()};
+  });
+}
+$("#add").onclick=()=>{STATE.people.push({home:"",office:"",week:[1,1,1,1,1],over:{}});stale();renderPeople()};
+$("#clear").onclick=()=>{STATE={dates:[],people:[]};stale();renderDates();renderPeople();$("#status").textContent=""};
+$("#sample").onclick=()=>{STATE=JSON.parse(JSON.stringify(SAMPLE));stale();renderDates();renderPeople();$("#status").textContent=""};
+
+/* その日の参加者（行けない人は外す）。ci は参加者の色を日をまたいで揃えるための番号 */
+function peopleOn(iso){
+  return STATE.people.map((p,i)=>({p,i,m:markOf(p,iso)})).filter(x=>x.m!=="×"&&x.p.home.trim())
+    .map(({p,i,m})=>m==="会"?{station:p.home.trim(),from:"office",office:p.office.trim(),ci:i}
+                              :{station:p.home.trim(),from:"home",ci:i});
+}
+const pcol=i=>COLORS[((RESULT&&RESULT._people[i]&&RESULT._people[i].ci)??i)%COLORS.length];
+
+/* ---------- 2. 日付を比べる ---------- */
+$("#compare").onclick=async()=>{
+  const st=$("#status");
+  const known=new Set(META.geo.map(s=>s.n));
+  const ppl=STATE.people.filter(p=>p.home.trim());
+  if(!STATE.dates.length){st.textContent="候補日を 1 つ以上追加してください。";return}
+  if(ppl.length<2){st.textContent="自宅の最寄り駅を 2 人以上入れてください。";return}
+  const bad=ppl.flatMap(p=>[p.home,p.office]).map(x=>x.trim()).filter(x=>x&&!known.has(x));
+  if(bad.length){st.textContent=`知らない駅です: ${[...new Set(bad)].join("・")}（候補から選んでください）`;return}
+  st.textContent="計算中…";
+  const out=[];
+  for(const iso of STATE.dates){
+    const people=peopleOn(iso);
+    let res=null;
+    if(people.length>=2){
+      res=await API.search({people,depart:DEPART,min_bars:BARS_OK,max_travel:MAX_TRAVEL}).catch(e=>({error:e.message}));
+      if(res.error){st.textContent="エラー: "+res.error;return}
+    }
+    const best=res&&res.candidates[0];
+    out.push({iso,people,res,best,n:people.length,per:best?best.cost/people.length:null});
+  }
+  // 来られる人数が多い日を先に。同じ人数なら 1 人あたりの移動時間が短い日を先に
+  out.sort((a,b)=>(b.n-a.n)||((a.per??1e9)-(b.per??1e9))||a.iso.localeCompare(b.iso));
+  DAYS=out; CHOSEN=null;
+  st.textContent="地図を準備中…"; await MAPREADY; st.textContent="";
+  go(2);
+};
+
+function showDays(){
+  RESULT=null; SEL=null;
+  MAP.getSource("routes").setData(empty());
+  paintStations(null);
+  const top=DAYS[0], N=STATE.people.filter(p=>p.home.trim()).length;
+  const full=DAYS.filter(d=>d.n===top.n&&d.best);
+  const spread=full.length>1?Math.round(full[full.length-1].per-full[0].per):0;
+  $("#daysBanner").innerHTML=top.best?`<div class="banner">いちばん移動が少ないのは <b>${dlabel(top.iso)}</b>：
+    <b>${top.best.name}</b> に集まって 1人あたり <b>${Math.round(top.per)}分</b>
+    （${top.n}人・行き＋帰り）。<br>
+    ${full.length<2?"":spread<5?`${top.n}人が来られる日どうしの差は 1人 ${spread}分以内です。<b>どの日でもほぼ同じ</b>なので、日付はほかの都合で決めて大丈夫です。`
+      :`${top.n}人が来られる日の中では、いちばん多い日と 1人 <b>${spread}分</b> 違います。`}</div>`
+    :`<div class="empty">どの日も条件に合う駅がありません。</div>`;
+  $("#days").innerHTML=DAYS.map((d,k)=>`<div class="day ${k===0&&d.best?"first":""}" data-k="${k}">
+    <div class="top"><span class="dt">${dlabel(d.iso)}</span><span class="att">${d.n}/${N}人</span>
+      <span class="per">${d.best?`<b>${Math.round(d.per)}分</b><div>1人あたり</div>`:""}</span></div>
+    <div class="st">${d.best?`<b>${d.best.name}</b>（合計 ${d.best.cost}分）${k===0?'<span class="diff best">いちばん少ない</span>'
+      :d.n===top.n?`<span class="diff">+${Math.round(d.per-top.per)}分/人</span>`:'<span class="diff">来られない人がいる</span>'}`
+      :'<span class="tag">条件に合う駅がありません</span>'}</div>
+    <div>${STATE.people.map((p,i)=>p.home.trim()?`<span class="mark m-${markOf(p,d.iso)}"><i style="background:${COLORS[i%COLORS.length]}"></i>${p.home}
+      ${{会:"会社",家:"自宅","×":"×"}[markOf(p,d.iso)]}</span>`:"").join("")}</div></div>`).join("");
+  $$(".day").forEach(el=>{
+    const d=DAYS[+el.dataset.k];
+    if(d.best) el.onclick=()=>openDay(d);
+  });
+  drawPins(); drawLegend(null);
+  const b=new maplibregl.LngLatBounds();
+  pinPoints().forEach(([lat,lon])=>b.extend([lon,lat]));
+  if(!b.isEmpty()) MAP.fitBounds(b,{padding:60,duration:0,maxZoom:12});
+}
+
+/* ---------- 3. 駅を決める ---------- */
+$("#back").onclick=()=>go(2);
+async function openDay(d){
+  CHOSEN=d;
+  // 経路の表示は直前に検索した参加者で組むので、この日の参加者で検索し直す（読み込み済みなので速い）
+  const j=await API.search({people:d.people,depart:DEPART,min_bars:BARS_OK,max_travel:MAX_TRAVEL});
+  RESULT=j; RESULT._people=d.people;
+  go(3);
+  $("#dayHead").innerHTML=`<div class="banner"><b>${dlabel(d.iso)}</b> の飲み会（${d.n}人）<br>
+    ${STATE.people.map((p,i)=>p.home.trim()?`<span class="mark m-${markOf(p,d.iso)}"><i style="background:${COLORS[i%COLORS.length]}"></i>${p.home}
+      ${{会:`${p.office}の会社から`,家:"自宅から","×":"行けない"}[markOf(p,d.iso)]}</span>`:"").join("")}</div>`;
+  SEL=null; FIT=true;
+  paintStations(j); drawPins(); drawLegend(null); render();
+  if(j.candidates.length) selectStation(j.candidates[0].name);
+}
 
 function render(){
   const j=RESULT,c=j.candidates;
@@ -482,7 +704,7 @@ function renderDetail(d,r){
       <span class="tag" id="endtv"></span></div>
     <div id="after"></div>
     <h2 style="margin-top:12px">帰りの経路</h2>
-    ${d.routes.map((x,i)=>`<div style="margin-bottom:7px;border-left:3px solid ${i===d.tight?"#f08a00":COLORS[i%COLORS.length]};padding-left:8px">
+    ${d.routes.map((x,i)=>`<div style="margin-bottom:7px;border-left:3px solid ${i===d.tight?"#f08a00":pcol(i)};padding-left:8px">
         <div style="font-size:13px"><b>${x.name}</b> ${x.limit_s} 発
           ${i===d.tight?'<span class="pill hot">一番早い</span>':""}</div>
         <div class="tag">${x.legs.map(l=>`${l.line}（${l.stops[0].name}${l.stops[0].time?" "+l.stops[0].time:""}

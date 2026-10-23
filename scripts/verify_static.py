@@ -12,7 +12,6 @@ SITE = ROOT / "site"
 STATIC_URL = "http://127.0.0.1:8010/"
 SERVER_URL = "http://127.0.0.1:8000"
 
-SAMPLE = [("荻窪", "大手町"), ("川口", ""), ("西船橋", "品川"), ("蒲田", ""), ("聖蹟桜ヶ丘", "新宿")]   # 画面のサンプルと同じ
 DEPART, MIN_BARS, MAX_TRAVEL = 19 * 60, 30, 90
 
 
@@ -41,9 +40,7 @@ def check_files():
     return meta
 
 
-def server_top():
-    people = [{"station": h, "from": "office", "office": o} if o else {"station": h, "from": "home"}
-              for h, o in SAMPLE]
+def server_top(people):
     body = json.dumps({"people": people, "depart": DEPART,
                        "min_bars": MIN_BARS, "max_travel": MAX_TRAVEL}).encode()
     req = urllib.request.Request(f"{SERVER_URL}/api/search", data=body)
@@ -62,24 +59,27 @@ async def static_top():
         await pg.goto(STATIC_URL, wait_until="networkidle")
         await pg.click("#sample")
         await pg.wait_for_timeout(1200)
-        await pg.click("#go")
+        await pg.click("#compare")                 # 2. 日付を比べる
+        await pg.wait_for_selector(".day", timeout=60000)
+        await pg.locator(".day").first.click()      # 3. いちばん移動が少ない日の駅選び
         await pg.wait_for_selector(".cand", timeout=60000)
         await pg.wait_for_timeout(5000)
         rows = await pg.evaluate("() => RESULT.candidates.map(c => [c.name, c.cost, c.min_limit, c.min_stay])")
+        people = await pg.evaluate("() => RESULT._people.map(({ci, ...p}) => p)")
         await pg.screenshot(path="docs/20-static.png")
         await pg.evaluate("() => { MAP.easeTo({center:[139.76,35.70],zoom:12.2,duration:0}); return null }")
         await pg.wait_for_timeout(5000)
         await pg.locator("#mapwrap").screenshot(path="docs/21-static-zoom.png")
         print("console errors:", errs[:5] or "なし")
         await b.close()
-        return [tuple(r) for r in rows]
+        return [tuple(r) for r in rows], people
 
 
 if __name__ == "__main__":
     check_files()
     if "--compare" in sys.argv:
-        s = server_top()
-        t = asyncio.run(static_top())
+        t, people = asyncio.run(static_top())
+        s = server_top(people)   # 静的版で選んだ日の参加者（会社から／自宅から）をそのまま渡す
         print("サーバ版:", s)
         print("静的版　:", t)
         print("一致" if s == t else "**不一致**")

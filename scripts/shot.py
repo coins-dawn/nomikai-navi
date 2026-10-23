@@ -12,7 +12,9 @@ async def setup(pg, initial=False):
         await pg.screenshot(path="docs/09-start.png")
     await pg.click("#sample")
     await pg.wait_for_timeout(2500)
-    await pg.click("#go")
+    await pg.click("#compare")
+    await pg.wait_for_selector(".day", timeout=90000)
+    await pg.locator(".day").first.click()
     await pg.wait_for_selector(".cand", timeout=90000)
     await pg.wait_for_timeout(7000)
 
