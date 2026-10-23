@@ -26,12 +26,10 @@ h1 span{color:inherit}
 .sub{color:var(--muted);font-size:12px}
 .app{display:grid;grid-template-columns:310px 1fr;flex:1;min-height:0}
 .app[hidden],#step1[hidden]{display:none}
-/* 2 の画面は最大 4 列: 候補 | 各人 | 地図 | その人の詳細（選ぶと右に開く） */
-#ppl,#person{display:none}
-.app.has-p{grid-template-columns:310px 340px 1fr}
+/* 2 の画面は最大 3 列: 候補 | 地図 | 各人（候補を選ぶと右に開く。人を選ぶとその人の乗り換えを同じ列の中に広げる） */
+#ppl{display:none;border-right:none;border-left:1px solid var(--line)}
+.app.has-p{grid-template-columns:310px 1fr 380px}
 .app.has-p #ppl{display:block}
-.app.has-p.has-d{grid-template-columns:310px 340px 1fr 320px}
-.app.has-d #person{display:block;border-right:none;border-left:1px solid var(--line)}
 .pane .x{float:right;background:none;border:none;color:var(--muted);font-size:16px;line-height:1;padding:0 2px}
 .pane .x:hover{color:var(--fg)}
 .pane{overflow-y:auto;border-right:1px solid var(--line);padding:12px}
@@ -39,10 +37,10 @@ h1 span{color:inherit}
 #map{width:100%;height:100%}
 @media(max-width:1100px){
   body{overflow:auto;display:block}
-  .app,.app.has-p,.app.has-p.has-d{grid-template-columns:1fr;height:auto}
+  .app,.app.has-p{grid-template-columns:1fr;height:auto}
   .pane{border-right:none;border-left:none;border-bottom:1px solid var(--line);max-height:none}
-  #mapwrap{height:60vh;order:4}
-  #person{order:3}
+  #mapwrap{height:60vh;order:3}
+  #ppl{order:2}
 }
 .person{display:grid;grid-template-columns:14px 1fr auto;gap:6px;align-items:start;
   padding:8px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px;background:var(--panel2)}
@@ -162,6 +160,10 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 .who{border:1px solid var(--line);border-left:4px solid var(--pc);border-radius:8px;padding:7px 9px;margin-bottom:7px;cursor:pointer}
 .who:hover{background:var(--panel2)}
 .who.on{border-color:var(--pc);box-shadow:0 0 0 2px var(--pc) inset;background:#fff}
+.who .chev{float:right;color:var(--muted);font-size:11px;transition:transform .15s}
+.who.on .chev{transform:rotate(180deg);color:var(--pc)}
+.who .acc{display:none;cursor:default;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.who.on .acc{display:block}
 .who .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--pc);margin-right:5px}
 /* その人の詳細: 乗り換えを縦に並べる */
 .trip{margin:6px 0 14px}
@@ -252,21 +254,16 @@ th{color:var(--muted);font-weight:600;font-size:10px}
     <h2 style="margin-top:16px">使っているオープンデータ</h2>
     <div class="tag credits"></div>
   </div>
-  <!-- 左から 2 番目: 選んだ候補での各人の移動 -->
-  <div class="pane" id="ppl">
-    <button class="x" id="closeP" title="閉じる">×</button>
-    <div id="banner"></div>
-    <div id="detail"></div>
-  </div>
   <!-- 地図 -->
   <div id="mapwrap" style="position:relative;overflow:hidden">
     <div id="map"></div>
     <div class="legend" id="legend" style="display:none"></div>
   </div>
-  <!-- 右端: 選んだ人の乗り換え -->
-  <div class="pane" id="person">
-    <button class="x" id="closeD" title="閉じる">×</button>
-    <div id="pdetail"></div>
+  <!-- 右: 選んだ候補での各人の移動（人を選ぶと乗り換えをアコーディオンで広げる） -->
+  <div class="pane" id="ppl">
+    <button class="x" id="closeP" title="閉じる">×</button>
+    <div id="banner"></div>
+    <div id="detail"></div>
   </div>
 </div>
 
@@ -562,10 +559,10 @@ function go(k){
   if(k===2){layout();showDays()}
   window.scrollTo(0,0);
 }
-/* 候補を選ぶと 2 列目、人を選ぶと右端の列が開く */
+/* 候補を選ぶと右の列が開く */
 function layout(){
   const a=$("#app");
-  a.classList.toggle("has-p",!!CHOSEN); a.classList.toggle("has-d",!!CHOSEN&&SELP!=null);
+  a.classList.toggle("has-p",!!CHOSEN);
   if(MAP) MAP.resize();
 }
 $(".logo").onclick=e=>{e.preventDefault();location.reload()};   // ロゴで最初からやり直す
@@ -690,7 +687,6 @@ function showDays(){
 }
 function closeDay(){CHOSEN=null;SELP=null;layout();showDays()}
 $("#closeP").onclick=closeDay;
-$("#closeD").onclick=()=>selectPerson(SELP);
 
 /* 候補（日付と駅）を選ぶ */
 let OPENING=0;
@@ -730,27 +726,28 @@ function renderDetail(d,r){
       <td>${r.back[k]<0?"-":r.times[k]+r.back[k]+"分"}</td></tr>`).join("")}
     <tr><td><b>合計</b></td><td>${r.sum}分</td><td>${r.cost==null?"-":r.cost-r.sum+"分"}</td><td><b>${r.cost==null?"-":r.cost+"分"}</b></td></tr>
     </tbody></table>
-    <h2 style="margin-top:12px">人を選ぶと乗り換えと経路が出ます</h2>
+    <h2 style="margin-top:12px">人を押すと乗り換えと経路が出ます</h2>
     ${d.routes.map((x,i)=>`<div class="who${SELP===i?" on":""}" data-i="${i}" style="--pc:${pcol(i)}">
-        <div style="font-size:13px"><i class="dot"></i><b>${x.name}</b>
+        <div style="font-size:13px"><span class="chev">▼</span><i class="dot"></i><b>${x.name}</b>
           <span class="tag">${x.from==="office"?`${x.origin}の会社から`:"自宅から"}・計 ${r.times[i]+Math.max(r.back[i],0)}分</span></div>
         <div class="tag"><b>行き</b> ${r.times[i]}分：${legText(x.go)}</div>
         <div class="tag"><b>帰り</b> ${r.back[i]<0?"-":r.back[i]+"分"}：${legText(x.back)}</div>
+        <div class="acc">${personHTML(i)}</div>
       </div>`).join("")}`;
   $$(".who").forEach(el=>el.onclick=()=>selectPerson(+el.dataset.i));
+  $$(".who .acc").forEach(el=>el.onclick=e=>e.stopPropagation());   // 広げた中を押しても閉じない
 }
 
-/* 人を選ぶ（もう一度押すと解除）。右端にその人の乗り換えを出し、地図でその人の経路を強調する */
+/* 人を選ぶ（もう一度押すと解除）。そのカードを広げて乗り換えを出し、地図でその人の経路を強調する */
 function selectPerson(i){
   SELP=SELP===i?null:i;
   $$(".who").forEach(w=>w.classList.toggle("on",+w.dataset.i===SELP));
-  layout(); FIT=true;
-  if(SELP!=null) renderPerson();
-  drawDetail(DETAIL);
-  if(SELP!=null&&window.innerWidth<=1100) $("#person").scrollIntoView({behavior:"smooth"});
+  FIT=true; drawDetail(DETAIL);
+  const el=$(`.who[data-i="${SELP}"]`);
+  if(el) el.scrollIntoView({behavior:"smooth",block:"nearest"});
 }
-function renderPerson(){
-  const x=DETAIL.routes[SELP], r=RESULT.all.find(v=>v.name===SEL);
+function personHTML(i){
+  const x=DETAIL.routes[i], r=RESULT.all.find(v=>v.name===SEL);
   const timeOf=s=>s&&s.time!=null?`<span class="tag">${typeof s.time==="number"?fmt(s.time):s.time}</span> `:"";   // 時刻はサーバ版だけ（静的版は時刻表を配らないので無い）
   const timeline=(legs,from,to)=>{
     if(!legs.length) return `<div class="tag">同じ駅なので移動はありません。</div>`;
@@ -769,13 +766,11 @@ function renderPerson(){
   const go=timeline(x.go,`${x.origin}（${x.from==="office"?"会社":"自宅"}）`,`${SEL}（飲み会）`);
   const bk=timeline(x.back,`${SEL}（飲み会）`,`${x.home}（自宅）`);
   const sub=(t,m)=>typeof t==="string"?"移動なし":`${m}分・乗り換え ${Math.max(t.trains-1,0)}回`;
-  $("#pdetail").innerHTML=`<div style="--pc:${pcol(SELP)}">
-    <h2><i class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--pc);margin-right:5px"></i>${x.name} さんの移動</h2>
-    <div class="trip"><h3>行き <span class="tag">19:00 発・${sub(go,r.times[SELP])}</span></h3>
+  return `<div class="trip"><h3>行き <span class="tag">19:00 発・${sub(go,r.times[i])}</span></h3>
       ${typeof go==="string"?go:`<div class="tl">${go.h}</div>`}</div>
-    <div class="trip"><h3>帰り <span class="tag">${fmt(RESULT.back_depart)} 発・${r.back[SELP]<0?"-":sub(bk,r.back[SELP])}</span></h3>
+    <div class="trip"><h3>帰り <span class="tag">${fmt(RESULT.back_depart)} 発・${r.back[i]<0?"-":sub(bk,r.back[i])}</span></h3>
       ${typeof bk==="string"?bk:`<div class="tl">${bk.h}</div>`}</div>
-    <div class="tag">${SEL} から ${x.home} への終電は <b>${x.limit_s}</b> です。</div></div>`;
+    <div class="tag">${SEL} から ${x.home} への終電は <b>${x.limit_s}</b> です。</div>`;
 }
 boot();
 </script>
