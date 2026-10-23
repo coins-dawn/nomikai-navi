@@ -85,16 +85,20 @@ const API = {
   async detail({people, station, depart}){
     const cid = stationId(station);
     const bars = META.byId[cid].b ? await get(`bars/${cid}.json`) : [];
+    // 帰りは候補駅を 21:30 に出る経路（候補駅＝飲み屋 10 軒以上のときだけ用意してある）
+    const back = await get(`back/${cid}.json`).catch(() => ({}));
+    const legsOf = list => (list || []).map(expand).map(l => ({...l, stops:l.nodes.map(stop)}));
     const out = [];
     for (let k = 0; k < people.length; k++){
       const p = people[k], r = ROWS[k];
-      const routes = await r.route();
+      const oid = p.from === "office" ? stationId(p.office) : r.id;
+      const go = oid === cid ? [] : (await get(`go/${oid}.json`))[cid];
       const lim = r.limit[cid];
-      const legs = (routes[cid] || []).map(expand).map(l => ({...l, stops:l.nodes.map(stop)}));
-      if (legs.length) legs[0].stops[0].time = hhmm(lim);
-      out.push({name:p.name || p.station, home:p.station, bus:null,
+      out.push({name:p.name || p.station, home:p.station, from:p.from,
+                origin: p.from === "office" ? p.office : p.station,
+                go: legsOf(go), back: r.id === cid ? [] : legsOf(back[r.id]),
                 limit:lim, limit_s:hhmm(lim),
-                home_lat:META.byId[r.id].lat, home_lon:META.byId[r.id].lon, legs});
+                home_lat:META.byId[r.id].lat, home_lon:META.byId[r.id].lon});
     }
     const s = META.byId[cid];
     return {station:s.n, lat:s.lat, lon:s.lon, bars, routes:out,

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""終電ファースト飲み会ナビ — ローカル用の小さな API サーバ（標準ライブラリだけで動く）。
+"""どこで飲む？ナビ — ローカル用の小さな API サーバ（標準ライブラリだけで動く）。
 
     python3 server.py  →  http://127.0.0.1:8000/
 """
@@ -55,21 +55,23 @@ def bars_near(lat, lon, radius=500):
 
 
 def detail(payload):
-    """選ばれた駅について、飲み屋の位置と各人の帰りの経路を返す。"""
+    """選ばれた駅について、飲み屋の位置と各人の行き・帰りの経路を返す（所要時間と同じ条件で探索する）。"""
     node = NAME2ID[payload["station"]]
     depart = payload.get("depart", DEFAULT_DEPART)
     people, routes = payload["people"], []
     for p in people:
         home = NAME2ID.get(p["station"])
+        origin = NAME2ID[p["office"]] if p.get("from") == "office" else home
         lim = limits_for(home, None)[node]
-        j = NET.journey(node, lim, home) if lim > -10**6 else None
-        legs = j["legs"] if j else []
+        go = NET.journey(origin, depart, node) if origin != node else None
+        back = NET.journey(node, BACK_DEPART, home) if home != node else None
         routes.append({
             "name": p.get("name") or p["station"],
-            "home": p["station"], "bus": None,
+            "home": p["station"], "from": p.get("from"),
+            "origin": p["office"] if p.get("from") == "office" else p["station"],
             "limit": lim, "limit_s": fmt(lim),
             "home_lat": NET.node_pos[home][0], "home_lon": NET.node_pos[home][1],
-            "legs": legs,
+            "go": go["legs"] if go else [], "back": back["legs"] if back else [],
         })
     tight = min(range(len(routes)), key=lambda i: routes[i]["limit"])
     n = [x for x in NODES if x["id"] == node][0]

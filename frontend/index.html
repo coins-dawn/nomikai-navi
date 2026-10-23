@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>終電ファースト飲み会ナビ</title>
+<title>どこで飲む？ナビ</title>
 <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <style>
-/* 白を基調にする（2026-10-22 ユーザー指示。それまでは夜のトーンだった） */
+/* 白を基調にする（2026-10-22 ユーザー指示。それまでは夜のトーンだった）。強調色は青（2026-10-23 ユーザー指示。それまではオレンジ） */
 :root{
   --bg:#ffffff; --panel:#ffffff; --panel2:#f6f5f2; --line:#e4e1da;
-  --fg:#22201c; --muted:#77716a; --accent:#e08600; --accent-ink:#9a5800; --accent2:#0e8f63; --warn:#d6336c;
+  --fg:#22201c; --muted:#77716a; --accent:#1f6fd1; --accent-ink:#154f9e; --accent2:#0e8f63; --warn:#d6336c;
   --gold:#d99a00;
   color-scheme:light;
 }
@@ -22,6 +22,7 @@ header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-
 h1{margin:0;font-size:17px;letter-spacing:.01em;display:flex;align-items:center;gap:7px}
 .beer{}
 h1 span{color:var(--accent-ink)}
+.logo{display:flex;align-items:center;gap:7px;color:inherit;text-decoration:none}
 .sub{color:var(--muted);font-size:12px}
 .app{display:grid;grid-template-columns:330px 1fr;flex:1;min-height:0}
 .app[hidden],#step1[hidden]{display:none}
@@ -66,7 +67,7 @@ button.ghost{background:none;border:1px dashed var(--line);color:var(--muted);wi
 .cand{display:grid;grid-template-columns:24px 1fr auto;gap:9px;align-items:center;background:var(--panel);
   border:1px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;margin-bottom:7px}
 .cand:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.cand.sel{border-color:var(--accent);background:#fff8ec}
+.cand.sel{border-color:var(--accent);background:#f1f6fe}
 .rank{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--panel2);
   color:var(--muted);font-size:11px;font-weight:700}
 .cand.sel .rank{background:var(--accent);color:#fff}
@@ -96,16 +97,25 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 .mk.sta{width:17px;height:17px;background:#fff;border:4px solid var(--accent);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
 .mk.bar{width:7px;height:7px;border-width:1px}
 /* 3 つの段階（予定を入れる → 日付を比べる → 駅を決める） */
-.steps{display:flex;gap:4px;margin-left:auto}
-.steps button{border:none;background:none;color:var(--muted);font-size:12.5px;padding:5px 10px;border-radius:99px}
-.steps button b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--panel2);
-  border:1px solid var(--line);font-size:11px;margin-right:4px}
-.steps button.on{color:var(--fg);font-weight:700;background:var(--panel2)}
+.stepbar{flex:none;display:flex;justify-content:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.steps{display:flex;gap:6px;align-items:center}
+.steps button{border:1px solid transparent;background:none;color:var(--muted);font-size:13.5px;padding:6px 14px;border-radius:99px}
+.steps button b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#fff;
+  border:1px solid var(--line);font-size:11.5px;margin-right:5px}
+.steps button.on{color:var(--fg);font-weight:700;background:#fff;border-color:var(--line)}
 .steps button.on b{background:var(--accent);border-color:var(--accent);color:#fff}
 .steps button:disabled{opacity:.4;cursor:default}
-@media(max-width:700px){.legend p{display:none}.legend{font-size:10px;bottom:30px}}
-@media(max-width:700px){.steps{margin-left:0;width:100%}.steps button{flex:1;padding:5px 2px;font-size:11.5px}}
+.steps i{color:var(--line);font-style:normal}
+@media(max-width:700px){.stepbar{padding:6px 8px}.steps{width:100%;gap:2px}.steps button{flex:1;padding:5px 2px;font-size:11.5px}.steps i{display:none}}
 #step1{flex:1;overflow-y:auto;padding:16px}
+.intro{display:flex;align-items:center;gap:14px;background:#eaf2fd;border:2px solid var(--accent);border-radius:12px;padding:14px 16px}
+.intro>div{flex:1;font-size:15px}
+.intro .tag{margin-top:2px;font-size:12px}
+#sample{background:var(--accent);color:#fff;border:none;font-weight:700;font-size:16px;padding:12px 22px;border-radius:10px;
+  white-space:nowrap;box-shadow:0 3px 0 #13509c,0 4px 12px rgba(31,111,209,.35)}
+#sample:hover{background:#2a7de0}
+#sample:active{transform:translateY(2px);box-shadow:0 1px 0 #13509c}
+@media(max-width:700px){.intro{flex-direction:column;align-items:stretch;text-align:center}}
 .s1wrap{max-width:760px;margin:0 auto}
 .s1wrap h2{margin:18px 0 6px;font-size:13px;color:var(--fg)}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -126,7 +136,7 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 .mark{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:1px 6px 1px 4px;border-radius:99px;
   border:1px solid var(--line);background:#fff;margin:2px 3px 0 0;white-space:nowrap}
 .mark i{width:8px;height:8px;border-radius:50%;display:inline-block}
-.mark.m-会{border-color:#f0c27a;background:#fff4e2}
+.mark.m-会{border-color:#9cc0ee;background:#eaf2fd}
 .mark.m-家{border-color:#9fd3bb;background:#eef8f3}
 .mark.m-×{color:#a8a29a;text-decoration:line-through}
 .day{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
@@ -141,7 +151,7 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 .day .st b{color:var(--accent-ink)}
 .day .diff{font-size:11px;color:var(--warn);margin-left:6px}
 .day .diff.best{color:var(--accent2)}
-.day.first{border-color:var(--accent);background:#fff8ec}
+.day.first{border-color:var(--accent);background:#f1f6fe}
 .back{background:none;border:none;color:var(--accent-ink);padding:0 0 8px;font-size:13px}
 .pin.p-date{flex-direction:column;gap:2px}
 .pin.p-date span{background:var(--accent);color:#fff;text-align:center;line-height:1.35;padding:3px 6px;font-size:12px}
@@ -154,7 +164,7 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 .pin.p-office i{width:12px;height:12px;border-radius:2px}
 .pin.p-cand i{width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font:700 11px/16px sans-serif;
   text-align:center;font-style:normal}
-.pin.p-cand.sel i{width:26px;height:26px;line-height:22px;font-size:13px;background:#c25e00}
+.pin.p-cand.sel i{width:26px;height:26px;line-height:22px;font-size:13px;background:#154f9e}
 .pin span{font-size:11px;font-weight:700;color:var(--fg);background:rgba(255,255,255,.92);padding:0 5px;
   border-radius:4px;white-space:nowrap;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
 .pin.p-cand.sel span{font-size:12.5px}
@@ -168,7 +178,7 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 </head>
 <body>
 <header>
-  <h1>終電ファースト<span>飲み会ナビ</span>
+  <h1><a href="./" class="logo" title="最初から">どこで飲む？<span>ナビ</span>
     <svg class="beer" viewBox="0 0 64 64" width="26" height="26" aria-hidden="true">
       <g stroke="#7a3d00" stroke-width="3.4" stroke-linejoin="round">
         <path d="M44 26h7a6 6 0 0 1 0 12h-7z" fill="#ffd9a0"/>
@@ -176,21 +186,24 @@ th{color:var(--muted);font-weight:600;font-size:10px}
         <path d="M15 22c0-6 5-9 8-9 2-4 9-5 12-2 5-2 10 1 10 6 0 3-2 5-5 5z" fill="#fff8ee"/>
       </g>
       <path d="M22 30h5v18h-5z" fill="#ffe3a8" opacity=".9"/>
-    </svg></h1>
+    </svg></a></h1>
   <div class="sub">候補日ごとに、<b>会社から来る人</b>・<b>自宅から来る人</b>の<b>移動時間の合計がいちばん少ない駅</b>を探して比べます。</div>
+</header>
+<div class="stepbar">
   <nav class="steps" id="steps">
-    <button data-s="1"><b>1</b>予定を入れる</button>
-    <button data-s="2"><b>2</b>日付を比べる</button>
+    <button data-s="1"><b>1</b>予定を入れる</button><i>›</i>
+    <button data-s="2"><b>2</b>日付を比べる</button><i>›</i>
     <button data-s="3"><b>3</b>駅を決める</button>
   </nav>
-</header>
+</div>
 
 <!-- 1. 予定を入れる -->
 <section id="step1">
   <div class="s1wrap">
-    <div class="sample">
-      <button id="sample">サンプルを入れる（5人・6日）</button>
-      <button id="clear">全部消す</button>
+    <div class="intro">
+      <div><b>まずはサンプルで試せます</b>
+        <div class="tag">5人・候補日6日の例が入ります。続けて「日付を比べる」を押すと、結果まで見られます。</div></div>
+      <button id="sample">サンプルで試す</button>
     </div>
     <h2>候補日（平日）</h2>
     <div class="row"><input type="date" id="dateIn"><button id="addDate">追加</button></div>
@@ -246,7 +259,7 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const fmt=v=>`${String(Math.floor(v/60)%24).padStart(2,"0")}:${String(v%60).padStart(2,"0")}`;
 const hm=s=>{const[a,b]=s.split(":");return +a*60+ +b};
-const COLORS=["#0f9d74","#2b7fd9","#8a4fd0","#d6457f","#5a9e1f","#b88300","#1a9fa8","#b4632e"];
+const COLORS=["#0f9d74","#e07b00","#8a4fd0","#d6457f","#5a9e1f","#b88300","#1a9fa8","#b4632e"];
 let DEPART=19*60;      // 集合時刻は 19:00 に固定（事前計算の都合と、画面を増やさないため）
 const BARS_OK=30;      // これだけ飲み屋があれば「飲み会ができる駅」として候補にする
 const MAX_TRAVEL=90;   // 片道がこれを超える駅はおすすめに出さない（会場が遠くに引きずられるのを防ぐ）
@@ -273,16 +286,25 @@ function initMap(){
   MAP.addControl(new maplibregl.NavigationControl({showCompass:false}),"top-right");
   MAP.on("load",()=>{
     // 下地の文字を全部消す（駅の色と経路を読みたいので、地名・道路名は邪魔になる）
+    // 道路・空港・建物・OSM の線路も消す（路線は自前で描く）。県境だけは地理の手がかりに残す
+    const HIDE=new Set(["transportation","aeroway","building"]);
     MAP.getStyle().layers.forEach(l=>{
-      if(l.type==="symbol") MAP.setLayoutProperty(l.id,"visibility","none");
+      if(l.type==="symbol"||HIDE.has(l["source-layer"])||l.id==="boundary_2"||l.id==="boundary_disputed")
+        MAP.setLayoutProperty(l.id,"visibility","none");
     });
     // 駅の色と経路を読みやすくするため、下地を白で薄める
     MAP.addLayer({id:"dim",type:"background",
       paint:{"background-color":MAPDIM,"background-opacity":.55}});
+    // 県境（admin_level 4）は白い膜の上に出す
+    MAP.setFilter("boundary_3",["all",["==",["get","admin_level"],4],["!=",["get","maritime"],1]]);
+    MAP.setPaintProperty("boundary_3","line-color","#8d857a");
+    MAP.setPaintProperty("boundary_3","line-opacity",.6);
+    MAP.setPaintProperty("boundary_3","line-width",1.1);
+    MAP.moveLayer("boundary_3");
     // 路線網（公式のラインカラー。あくまで背景なので細く薄く）
     MAP.addSource("rails",{type:"geojson",data:empty()});
     MAP.addLayer({id:"rail-line",type:"line",source:"rails",
-      paint:{"line-color":["coalesce",["get","color"],"#7d858f"],"line-opacity":.75,
+      paint:{"line-color":["coalesce",["get","color"],"#7d858f"],"line-opacity":.3,
         "line-width":["interpolate",["linear"],["zoom"],8,.9,11,1.8,15,3.4]},
       layout:{"line-cap":"round","line-join":"round"}});
     // 全駅。計算後は「いちばん早い人の終電」で色を塗る
@@ -307,20 +329,18 @@ function initMap(){
         .addTo(MAP);
     });
     MAP.addSource("routes",{type:"geojson",data:empty()});
+    // 行き（19:00 に会社か自宅を出る）は細く薄く、帰り（21:30 に飲み会の駅を出る）は太く
+    const W=["case",["==",["get","dir"],"go"],2.5,4];
     MAP.addLayer({id:"route-case",type:"line",source:"routes",
-      paint:{"line-color":"#fff","line-opacity":.9,"line-width":["case",["get","tight"],10,5]},
+      paint:{"line-color":"#fff","line-opacity":.9,"line-width":["+",W,3]},
       layout:{"line-cap":"round","line-join":"round"}});
     MAP.addLayer({id:"route-other",type:"line",source:"routes",
-      filter:["all",["!",["get","tight"]],["!=",["get","kind"],"walk"]],
-      paint:{"line-color":["get","color"],"line-width":3,"line-opacity":.85},
+      filter:["!=",["get","kind"],"walk"],
+      paint:{"line-color":["get","color"],"line-width":W,"line-opacity":["case",["==",["get","dir"],"go"],.6,.95]},
       layout:{"line-cap":"round","line-join":"round"}});
     MAP.addLayer({id:"route-walk",type:"line",source:"routes",
       filter:["==",["get","kind"],"walk"],
-      paint:{"line-color":["get","color"],"line-width":3,"line-dasharray":[1,1.6]},
-      layout:{"line-cap":"round","line-join":"round"}});
-    MAP.addLayer({id:"route-tight",type:"line",source:"routes",
-      filter:["all",["get","tight"],["!=",["get","kind"],"walk"]],
-      paint:{"line-color":"#f08a00","line-width":6},
+      paint:{"line-color":["get","color"],"line-width":W,"line-dasharray":[1,1.6]},
       layout:{"line-cap":"round","line-join":"round"}});
   });
 }
@@ -333,24 +353,24 @@ function marker(lat,lon,cls,html){
   m.addTo(MAP); MARKERS.push(m); return m;
 }
 
+const legCoords=l=>l.shape||legShape(l.rw,l.a,l.b)||l.stops.map(s=>[s.lat,s.lon]);
 function drawDetail(d){
   DETAIL=d;
   const feats=[];
   d.routes.forEach((r,i)=>{
-    const color=pcol(i), tight=(i===d.tight);
-    r.legs.forEach(l=>{
-      const co=(l.shape||legShape(l.rw,l.a,l.b)||l.stops.map(s=>[s.lat,s.lon])).map(p=>[p[1],p[0]]);
+    [["go",r.go],["back",r.back]].forEach(([dir,legs])=>legs.forEach(l=>{
+      const co=legCoords(l).map(p=>[p[1],p[0]]);
       if(co.length<2) return;
       feats.push({type:"Feature",geometry:{type:"LineString",coordinates:co},
-        properties:{color:tight?"#f08a00":color,tight,kind:l.kind,who:r.name,line:l.line}});
-    });
+        properties:{color:pcol(i),dir,kind:l.kind,who:r.name,line:l.line}});
+    }));
   });
   MAP.getSource("routes").setData({type:"FeatureCollection",features:feats});
 
   drawPins();
   const b=new maplibregl.LngLatBounds([d.lon,d.lat],[d.lon,d.lat]);
   pinPoints().forEach(([lat,lon])=>b.extend([lon,lat]));
-  d.routes.forEach(r=>r.legs.forEach(l=>(l.shape||legShape(l.rw,l.a,l.b)||l.stops.map(s=>[s.lat,s.lon])).forEach(p=>b.extend([p[1],p[0]]))));
+  d.routes.forEach(r=>[...r.go,...r.back].forEach(l=>legCoords(l).forEach(p=>b.extend([p[1],p[0]]))));
   if(FIT){MAP.fitBounds(b,{padding:{top:60,bottom:60,left:60,right:60},duration:700,maxZoom:13});FIT=false}
   drawLegend(d);
 }
@@ -423,10 +443,9 @@ function drawLegend(d){
   L.innerHTML=`<div class="lrow"><span class="lg-cand">1</span> 候補の駅（移動の合計が少ない順）</div>
     <div class="lrow"><span class="lg-home"></span> 自宅の最寄り駅</div>
     <div class="lrow"><span class="lg-office"></span> 会社の最寄り駅</div>
-    ${d?`<hr><h3>${d.station} からの帰り道</h3>
-    ${d.routes.map((r,i)=>`<div class="lrow"><s style="background:${i===d.tight?"#f08a00":pcol(i)};
-      height:${i===d.tight?5:3}px"></s> ${r.name} ${r.limit_s}${i===d.tight?" ← 一番早い":""}</div>`).join("")}
-    <p class="tag" style="font-size:10px">点線は徒歩</p>`:""}`;
+    ${d?`<hr><h3>${d.station} への行きと帰り</h3>
+    ${d.routes.map((r,i)=>`<div class="lrow"><s style="background:${pcol(i)};height:4px"></s> ${r.name}</div>`).join("")}
+    <p class="tag" style="font-size:10px">細い線＝行き（19:00 発）、太い線＝帰り（21:30 発）。点線は徒歩</p>`:""}`;
 }
 
 /* 路線網と全駅を敷く（検索前から出す） */
@@ -526,6 +545,7 @@ function go(k){
   if(k===2) showDays();
   window.scrollTo(0,0);
 }
+$(".logo").onclick=e=>{e.preventDefault();location.reload()};   // ロゴで最初からやり直す
 $$("#steps button").forEach(b=>b.onclick=()=>{if(b.disabled) return; +b.dataset.s===3?openDay(CHOSEN):go(+b.dataset.s)});
 
 function renderDates(){
@@ -572,8 +592,10 @@ function renderPeople(){
   });
 }
 $("#add").onclick=()=>{STATE.people.push({home:"",office:"",week:[1,1,1,1,1],over:{}});stale();renderPeople()};
-$("#clear").onclick=()=>{STATE={dates:[],people:[]};stale();renderDates();renderPeople();$("#status").textContent=""};
-$("#sample").onclick=()=>{STATE=JSON.parse(JSON.stringify(SAMPLE));stale();renderDates();renderPeople();$("#status").textContent=""};
+$("#sample").onclick=()=>{STATE=JSON.parse(JSON.stringify(SAMPLE));stale();renderDates();renderPeople();
+  $("#status").textContent="";
+  $("#compare").scrollIntoView({behavior:"smooth",block:"center"});   // 次に押すボタンまで連れていく
+};
 
 /* その日の参加者（行けない人は外す）。ci は参加者の色を日をまたいで揃えるための番号 */
 function peopleOn(iso){
@@ -662,11 +684,11 @@ function render(){
   const j=RESULT,c=j.candidates;
   if(!c.length){$("#list").innerHTML=`<div class="empty">条件に合う駅がありません。しきい値をゆるめてください。</div>`;
     $("#banner").innerHTML="";$("#detail").innerHTML="";return}
-  const best=c[0],bs=j.by_stay,n=j.people.length;
+  const best=c[0],n=j.people.length;
   $("#banner").innerHTML=`<div class="banner">全員の移動時間の合計がいちばん少ないのは <b>${best.name}</b>：
     合計 <b>${best.cost}分</b>（1人あたり ${Math.round(best.cost/n)}分）。
     行きは 19:00 に会社または自宅を出て、帰りは ${fmt(j.back_depart)} に飲み会駅を出たときの所要時間です。
-    ${bs&&bs.name!==best.name?`<br><span class="tag">いちばん早い人が長くいられる駅で選ぶと ${bs.name}（合計 ${bs.cost}分・滞在 ${bs.min_stay}分）。</span>`:""}</div>`;
+</div>`;
   $("#list").innerHTML=c.map((r,i)=>`<div class="cand ${r.name===SEL?"sel":""}" data-n="${r.name}">
       <div class="rank">${i+1}</div>
       <div><div class="nm">${r.name}</div>
@@ -688,9 +710,9 @@ async function selectStation(name){
   drawDetail(d); renderDetail(d,r);
 }
 
+const legText=legs=>legs.length?legs.map(l=>`${l.line}（${l.stops[0].name}→${l.stops.slice(-1)[0].name}）`).join(" ／ "):"乗らない（同じ駅）";
 function renderDetail(d,r){
   const j=RESULT;
-  const endMax=Math.min(...r.limits), endDefault=Math.max(j.depart+60,endMax-30);
   $("#detail").innerHTML=`<h2 style="margin-top:14px">${r.name} に集まったら</h2>
     <table><thead><tr><th>参加者</th><th>行き</th><th>帰り</th><th>計</th></tr></thead><tbody>
     ${j.people.map((p,k)=>`<tr><td>${p.name}</td>
@@ -699,32 +721,13 @@ function renderDetail(d,r){
     <tr><td><b>合計</b></td><td>${r.sum}分</td><td>${r.cost==null?"-":r.cost-r.sum+"分"}</td><td><b>${r.cost==null?"-":r.cost+"分"}</b></td></tr>
     </tbody></table>
     ${r.cost==null?`<div class="tag">飲み屋が少ない駅なので、帰りの所要時間は計算していません。</div>`:""}
-    <div class="row"><label>一次会の終了</label>
-      <input type="range" id="endt" min="${j.depart+60}" max="${endMax}" step="5" value="${endDefault}">
-      <span class="tag" id="endtv"></span></div>
-    <div id="after"></div>
-    <h2 style="margin-top:12px">帰りの経路</h2>
-    ${d.routes.map((x,i)=>`<div style="margin-bottom:7px;border-left:3px solid ${i===d.tight?"#f08a00":pcol(i)};padding-left:8px">
-        <div style="font-size:13px"><b>${x.name}</b> ${x.limit_s} 発
-          ${i===d.tight?'<span class="pill hot">一番早い</span>':""}</div>
-        <div class="tag">${x.legs.map(l=>`${l.line}（${l.stops[0].name}${l.stops[0].time?" "+l.stops[0].time:""}
-          →${l.stops.slice(-1)[0].name}${l.stops.slice(-1)[0].time?" "+l.stops.slice(-1)[0].time:""}）`).join(" ／ ")||"経路なし"}</div>
+    <h2 style="margin-top:12px">行きと帰りの経路</h2>
+    ${d.routes.map((x,i)=>`<div style="margin-bottom:9px;border-left:3px solid ${pcol(i)};padding-left:8px">
+        <div style="font-size:13px"><b>${x.name}</b>
+          <span class="tag">終電 ${x.limit_s}</span></div>
+        <div class="tag"><b>行き</b> ${x.origin}（${x.from==="office"?"会社":"自宅"}）19:00 発 ${r.times[i]}分：${legText(x.go)}</div>
+        <div class="tag"><b>帰り</b> 21:30 発 ${r.back[i]<0?"-":r.back[i]+"分"}：${legText(x.back)}</div>
       </div>`).join("")}`;
-  const sl=$("#endt");
-  sl.oninput=()=>{
-    $("#endtv").textContent=fmt(+sl.value);
-    const t=+sl.value,NIJI=60;
-    const rest=j.people.map((p,k)=>({name:p.name,left:r.limits[k]-t,out:r.limits[k]}));
-    $("#after").innerHTML=`<div class="banner" style="border-left-color:var(--accent2)">
-        <b>${fmt(t)}</b> に締めると、二次会に 1 時間いられるのは <b>${rest.filter(x=>x.left>=NIJI).length} / ${rest.length} 人</b>。
-        ${rest.filter(x=>x.left<NIJI).map(x=>`<span class="pill hot">${x.name} は ${fmt(x.out)} に出る</span>`).join(" ")}</div>
-      <table><thead><tr><th>参加者</th><th>あと何分いられるか</th><th></th></tr></thead><tbody>
-      ${rest.map(x=>`<tr><td>${x.name}</td>
-        <td style="width:58%"><div class="bar"><i class="${x.left<NIJI?"short":""}"
-          style="width:${Math.max(0,Math.min(100,x.left/180*100))}%"></i></div></td>
-        <td>${x.left<=0?"もう出ないと帰れません":x.left+"分"}</td></tr>`).join("")}</tbody></table>`;
-  };
-  sl.oninput();
 }
 boot();
 </script>

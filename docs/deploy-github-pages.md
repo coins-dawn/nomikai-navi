@@ -20,6 +20,7 @@
 | `home/<駅>.json` | その駅に住む人の、候補駅ごとの**帰宅リミット**と**所要時間** | 数値 2 つ/組だけ。できない |
 | `bus/<駅>.json` | その駅から乗れるバス停と**最終便の時刻**、最終便ごとのリミット | 1 日 1 本ぶん。できない |
 | `route/<候補>.json` | 帰りの経路の**駅の並びと路線名**。時刻は**出発時刻のみ**（＝リミットと同じ値） | 途中駅の時刻を含まない |
+| `go/<駅>.json`・`back/<候補>.json` | 行き（19:00 発）・帰り（21:30 発）の経路。区間ごとの**路線・乗る駅・降りる駅**だけ | 時刻を含まない |
 | `bars/<候補>.json` | OpenStreetMap の飲み屋（ODbL、出典表示で再配布可） | — |
 
 ## 2. 作る
@@ -88,5 +89,6 @@ GitHub の **Settings → Pages → Build and deployment → Source** を **GitH
 ```bash
 cp frontend/index.html site/index.html && cp frontend/engine-static.js site/engine.js
 python3 scripts/build_back.py                # 帰りの所要時間（home/*.json の back）だけ作り直すとき
+python3 scripts/build_paths.py               # 行き・帰りの経路（go/・back/）だけ作り直すとき
 python3 scripts/verify_static.py --compare   # サーバ版（:8000）と突き合わせる
 ```

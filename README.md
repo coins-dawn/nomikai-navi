@@ -1,4 +1,4 @@
-# nomikai-navi
+# nomikai-navi（どこで飲む？ナビ）
 
 複数人の集合駅をさがす Web アプリ。鉄道・バスの時刻表と地図を使う。
 
@@ -25,6 +25,7 @@ python3 server.py                 # http://127.0.0.1:8000/
 ```bash
 python3 scripts/build_static.py       # site/ を作る（CPU 2 コアで約 30 分）
 python3 scripts/build_back.py         # 帰りの所要時間だけ足し直す（build_static.py にも含まれる。約 20 秒）
+python3 scripts/build_paths.py        # 行き・帰りの経路だけ作り直す（build_static.py にも含まれる。約 2 分）
 python3 scripts/verify_static.py --compare   # 静的版とサーバ版の答えを突き合わせる
 python3 scripts/shot.py dark          # 画面キャプチャ
 ```
@@ -50,7 +51,8 @@ python3 scripts/shot.py dark          # 画面キャプチャ
 第三者が再利用可能な状態で公開・再配布することを禁じている（チャレンジ限定ライセンスにも同じ条項がある）。
 
 - 取得した時刻表は `data/raw/` に置き、**`.gitignore` で除外している**。
-- 公開する `site/` に入れるのは**探索した結果の数値と経路の駅の並びだけ**で、時刻表そのものは入れない。
+- 公開する `site/` に入れるのは**探索した結果の数値と経路の駅の並びだけ**で、時刻表そのものは入れない
+  （経路は区間ごとに路線・乗る駅・降りる駅だけ。時刻は入れない）。
 - 画面には、公共交通オープンデータセンター提供である旨・正確性を保証しない旨・問い合わせ先・
   静的データの取得日を出している（開発者ガイドライン 3.1）。表示内容は `data/site.json`。
 

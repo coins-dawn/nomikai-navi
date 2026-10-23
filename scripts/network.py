@@ -245,6 +245,58 @@ class Network:
                 cur = seq[k][0]
         return legs if cur == home else None
 
+    # ---------- 順方向探索（経路つき・全駅ぶん） ----------
+    def earliest_arrival_paths(self, origin, t0, rounds=5):
+        """earliest_arrival と同じ計算をしながら、経路の復元に必要な親を残す。
+
+        1 回の探索で「origin → 全ノード」の経路が取れる（rebuild_forward で組み立てる）。
+        """
+        INF = 10**6
+        label = [INF] * len(self.node_name)
+        label[origin] = t0
+        parent = [None] * len(self.node_name)
+        for _ in range(rounds):
+            nxt, par = label[:], parent[:]
+            improved = False
+            for ti, seq in enumerate(self.trips):
+                board = None
+                for k, (nid, arr, dep) in enumerate(seq):
+                    if board is not None and arr < nxt[nid]:
+                        nxt[nid], par[nid] = arr, ("t", ti, board, k)
+                        improved = True
+                    if board is None and label[nid] + (0 if nid == origin else TRANSFER_MIN) <= dep:
+                        board = k
+            for i in range(len(self.node_name)):
+                if nxt[i] >= INF:
+                    continue
+                for j, cost in self.foot[i]:
+                    if nxt[i] + cost < nxt[j]:
+                        nxt[j], par[j] = nxt[i] + cost, ("w", i)
+                        improved = True
+            label, parent = nxt, par
+            if not improved:
+                break
+        return label, parent
+
+    def rebuild_forward(self, parent, origin, target):
+        """順方向探索の親をたどって origin → target の区間を [路線, 乗る駅, 降りる駅] で返す（徒歩は路線 -1）。"""
+        legs, cur, guard = [], target, 0
+        while cur != origin and guard < 60:
+            guard += 1
+            p = parent[cur]
+            if p is None:
+                return None
+            if p[0] == "w":
+                legs.append([-1, p[1], cur])
+                cur = p[1]
+            else:
+                _, ti, b, k = p
+                seq = self.trips[ti]
+                legs.append([self.trip_rw[ti], seq[b][0], seq[k][0]])
+                cur = seq[b][0]
+        legs.reverse()
+        return legs if cur == origin else None
+
     # ---------- 経路つきの順方向探索 ----------
     def journey(self, origin, t0, target, rounds=5):
         """origin を t0 に出て target に着く経路を返す。着けなければ None。
