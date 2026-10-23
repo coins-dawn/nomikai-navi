@@ -122,6 +122,7 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 @media(max-width:700px){.intro{flex-direction:column;align-items:stretch;text-align:center}}
 .s1wrap{max-width:760px;margin:0 auto}
 .s1wrap h2{margin:18px 0 6px;font-size:13px;color:var(--fg)}
+select.crit{width:100%;font-size:14px;padding:8px 10px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:99px;padding:3px 4px 3px 10px;
   font-size:13px;background:var(--panel2)}
@@ -215,7 +216,7 @@ th{color:var(--muted);font-weight:600;font-size:10px}
       </g>
       <path d="M22 30h5v18h-5z" fill="#ffe3a8" opacity=".9"/>
     </svg></a></h1>
-  <div class="sub">候補日ごとに、<b>会社から来る人</b>・<b>自宅から来る人</b>の<b>移動時間の合計がいちばん少ない駅</b>を探して比べます。</div>
+  <div class="sub">候補日ごとに、<b>会社から来る人</b>・<b>自宅から来る人</b>の行きと帰りを調べて、<b>優先したい条件にいちばん合う駅</b>を探して比べます。</div>
 </header>
 <div class="stepbar">
   <nav class="steps" id="steps">
@@ -241,6 +242,14 @@ th{color:var(--muted);font-weight:600;font-size:10px}
       会社から来る人は「会社→飲み会→自宅」、自宅から来る人（在宅勤務・休み）は「自宅→飲み会→自宅」の移動時間を数えます。</div>
     <div id="people"></div>
     <button class="ghost" id="add">＋ 参加者を追加</button>
+    <h2>何を優先して駅を選ぶ？</h2>
+    <select id="crit" class="crit">
+      <option value="cost">移動時間の合計がいちばん少ない</option>
+      <option value="stay">終電がいちばん早い人が、いちばん遅くまでいられる</option>
+      <option value="simple">帰りの乗り換えがいちばん少ない（酔って乗り過ごさない）</option>
+      <option value="work">いちばん早く出る人が、いちばん遅くまで仕事できる</option>
+    </select>
+    <div class="tag" id="critNote" style="margin-top:4px"></div>
     <button class="primary" id="compare" style="margin-top:10px">日付と駅を比べる</button>
     <div class="tag" id="status" style="margin-top:8px"></div>
     <h2>使っているオープンデータ</h2>
@@ -669,6 +678,33 @@ function peopleOn(iso){
 }
 const pcol=i=>COLORS[((RESULT&&RESULT._people[i]&&RESULT._people[i].ci)??i)%COLORS.length];
 
+/* ---------- 何を優先して駅を選ぶか ----------
+   key は小さいほど良い（日付の並べ替えにも使う）。同じなら 1 人あたりの移動時間が少ない方を先に。
+   駅の順位づけそのものは engine.js / server.py の SORT_KEY と同じ */
+const CRIT={
+  cost:{note:"行き（会社か自宅 → 飲み会の駅）と帰り（飲み会の駅 → 自宅）の時間を全員ぶん足して、いちばん少ない駅を選びます。",
+    key:(r,n)=>[r.cost/n], big:(r,n)=>`${Math.round(r.cost/n)}分`, unit:"1人あたり", best:"いちばん少ない",
+    gap:(r,t,n)=>r.cost/n-t.cost/n, near:5, diff:(r,t,n)=>`+${Math.round(r.cost/n-t.cost/n)}分/人`,
+    head:(r,n)=>`1人あたり <b>${Math.round(r.cost/n)}分</b>（行き＋帰り）`, what:"移動"},
+  stay:{note:"参加者それぞれの終電（飲み会の駅を出る最終の時刻）のうち、いちばん早いものが、いちばん遅くなる駅を選びます。",
+    key:(r,n)=>[-r.min_limit,r.cost/n], big:r=>fmt(r.min_limit), unit:"いちばん早い終電", best:"いちばん遅い",
+    gap:(r,t)=>t.min_limit-r.min_limit, near:10, diff:(r,t)=>`終電 ${t.min_limit-r.min_limit}分早い`,
+    head:r=>`いちばん早い人の終電でも <b>${fmt(r.min_limit)}</b>`, what:"終電"},
+  simple:{note:"21:30 に飲み会の駅を出て帰るときの乗り換えが、いちばん多い人でも少なくなる駅を選びます（同じなら全員の合計回数が少ない駅）。",
+    key:(r,n)=>[r.max_x,r.sum_x,r.cost/n], big:r=>`${r.max_x}回`, unit:"帰りの乗り換え（最多の人）", best:"いちばん少ない",
+    gap:(r,t)=>r.max_x-t.max_x, near:1, diff:(r,t)=>r.max_x>t.max_x?`乗り換え +${r.max_x-t.max_x}回`:`全員で +${r.sum_x-t.sum_x}回`,
+    head:r=>`帰りの乗り換えは多い人でも <b>${r.max_x}回</b>（全員で ${r.sum_x}回）`, what:"帰りの乗り換え"},
+  work:{note:"飲み会の開始に間に合うよう、いちばん早く出なければならない人（行きがいちばん長い人）の行きの時間が、いちばん短くなる駅を選びます。",
+    key:(r,n)=>[r.max,r.cost/n], big:r=>`${r.max}分`, unit:"いちばん遠い人の行き", best:"いちばん短い",
+    gap:(r,t)=>r.max-t.max, near:5, diff:(r,t)=>`+${r.max-t.max}分`,
+    head:r=>`いちばん遠い人でも行きは <b>${r.max}分</b>（開始の ${r.max}分前に出れば間に合う）`, what:"いちばん遠い人の行き"},
+};
+let SORT="cost";
+const critNote=()=>$("#critNote").textContent=CRIT[$("#crit").value].note;
+$("#crit").onchange=()=>{critNote();stale()};
+critNote();
+const keyCmp=(a,b)=>{for(let i=0;i<a.length;i++) if(a[i]!==b[i]) return a[i]-b[i]; return 0};
+
 /* ---------- 2. 日付と駅を決める ---------- */
 $("#compare").onclick=async()=>{
   const st=$("#status");
@@ -679,39 +715,40 @@ $("#compare").onclick=async()=>{
   const bad=ppl.flatMap(p=>[p.home,p.office]).map(x=>x.trim()).filter(x=>x&&!known.has(x));
   if(bad.length){st.textContent=`知らない駅です: ${[...new Set(bad)].join("・")}（候補から選んでください）`;return}
   st.textContent="計算中…";
+  SORT=$("#crit").value;
   const out=[];
   for(const iso of STATE.dates){
     const people=peopleOn(iso);
     let res=null;
     if(people.length>=2){
-      res=await API.search({people,depart:DEPART,min_bars:BARS_OK,max_travel:MAX_TRAVEL}).catch(e=>({error:e.message}));
+      res=await API.search({people,depart:DEPART,min_bars:BARS_OK,max_travel:MAX_TRAVEL,sort:SORT}).catch(e=>({error:e.message}));
       if(res.error){st.textContent="エラー: "+res.error;return}
     }
     const best=res&&res.candidates[0];
     out.push({iso,people,res,best,n:people.length,per:best?best.cost/people.length:null});
   }
-  // 来られる人数が多い日を先に。同じ人数なら 1 人あたりの移動時間が短い日を先に
-  out.sort((a,b)=>(b.n-a.n)||((a.per??1e9)-(b.per??1e9))||a.iso.localeCompare(b.iso));
+  // 来られる人数が多い日を先に。同じ人数なら、選んだ条件で良い日を先に
+  const C=CRIT[SORT], kd=d=>d.best?C.key(d.best,d.n):[1e9];
+  out.sort((a,b)=>(b.n-a.n)||keyCmp(kd(a),kd(b))||a.iso.localeCompare(b.iso));
   DAYS=out; CHOSEN=null;
   st.textContent="地図を準備中…"; await MAPREADY; st.textContent="";
   go(2);
 };
 
 function showDays(){
-  const top=DAYS[0], N=STATE.people.filter(p=>p.home.trim()).length;
+  const top=DAYS[0], N=STATE.people.filter(p=>p.home.trim()).length, C=CRIT[SORT];
   const full=DAYS.filter(d=>d.n===top.n&&d.best);
-  const spread=full.length>1?Math.round(full[full.length-1].per-full[0].per):0;
-  $("#daysBanner").innerHTML=top.best?`<div class="banner">いちばん移動が少ないのは <b>${dlabel(top.iso)}</b>：
-    <b>${top.best.name}</b> に集まって 1人あたり <b>${Math.round(top.per)}分</b>
-    （${top.n}人・行き＋帰り）。<br>
-    ${full.length<2?"":spread<5?`${top.n}人が来られる日どうしの差は 1人 ${spread}分以内です。<b>どの日でもほぼ同じ</b>なので、日付はほかの都合で決めて大丈夫です。`
-      :`${top.n}人が来られる日の中では、いちばん多い日と 1人 <b>${spread}分</b> 違います。`}</div>`
+  const last=full[full.length-1], spread=full.length>1?C.gap(last.best,top.best,top.n):0;
+  $("#daysBanner").innerHTML=top.best?`<div class="banner">いちばん良いのは <b>${dlabel(top.iso)}</b>：
+    <b>${top.best.name}</b> に集まって、${C.head(top.best,top.n)}（${top.n}人）。<br>
+    ${full.length<2?"":spread<C.near?`${top.n}人が来られる日どうしで、${C.what}の差はほとんどありません。<b>どの日でもほぼ同じ</b>なので、日付はほかの都合で決めて大丈夫です。`
+      :`${top.n}人が来られる日の中では、いちばん良くない日と ${C.diff(last.best,top.best,top.n)} の差があります。`}</div>`
     :`<div class="empty">どの日も条件に合う駅がありません。</div>`;
   $("#days").innerHTML=DAYS.map((d,k)=>`<div class="day ${k===0&&d.best?"first":""}${d===CHOSEN?" hl":""}" data-k="${k}">
     <div class="top"><span class="dt">${dlabel(d.iso)}</span><span class="att">${d.n}/${N}人</span>
-      <span class="per">${d.best?`<b>${Math.round(d.per)}分</b><div>1人あたり</div>`:""}</span></div>
-    <div class="st">${d.best?`<b>${d.best.name}</b>（合計 ${d.best.cost}分）${k===0?'<span class="diff best">いちばん少ない</span>'
-      :d.n===top.n?`<span class="diff">+${Math.round(d.per-top.per)}分/人</span>`:'<span class="diff">来られない人がいる</span>'}`
+      <span class="per">${d.best?`<b>${C.big(d.best,d.n)}</b><div>${C.unit}</div>`:""}</span></div>
+    <div class="st">${d.best?`<b>${d.best.name}</b>（移動の合計 ${d.best.cost}分）${k===0?`<span class="diff best">${C.best}</span>`
+      :d.n===top.n?`<span class="diff">${C.gap(d.best,top.best,top.n)>0?C.diff(d.best,top.best,top.n):`${C.what}は同じ・移動 +${Math.round(d.per-top.per)}分/人`}</span>`:'<span class="diff">来られない人がいる</span>'}`
       :'<span class="tag">条件に合う駅がありません</span>'}</div>
     <div>${STATE.people.map((p,i)=>p.home.trim()?`<span class="mark m-${markOf(p,d.iso)}"><i style="background:${COLORS[i%COLORS.length]}"></i>${p.home}
       ${{会:"会社",家:"自宅","×":"×"}[markOf(p,d.iso)]}</span>`:"").join("")}</div></div>`).join("");
@@ -740,7 +777,7 @@ async function openDay(d,auto){
   $$(".day").forEach(el=>el.classList.toggle("hl",DAYS[+el.dataset.k]===d));
   $("#banner").innerHTML=""; $("#detail").innerHTML=`<div class="tag" style="padding:8px">${d.best.name} の経路を組み立て中…</div>`;
   // 経路の表示は直前に検索した参加者で組むので、この日の参加者で検索し直す（読み込み済みなので速い）
-  const j=await API.search({people:d.people,depart:DEPART,min_bars:BARS_OK,max_travel:MAX_TRAVEL});
+  const j=await API.search({people:d.people,depart:DEPART,min_bars:BARS_OK,max_travel:MAX_TRAVEL,sort:SORT});
   if(tok!==OPENING) return;
   j._people=d.people; RESULT=j; SEL=d.best.name;
   const r=j.all.find(x=>x.name===SEL);
@@ -755,6 +792,7 @@ async function openDay(d,auto){
 function render(best){
   const j=RESULT,n=j.people.length,d=CHOSEN;
   $("#banner").innerHTML=`<div class="banner"><b>${dlabel(d.iso)}</b> は <b>${best.name}</b> に集まる（${d.n}人）<br>
+    ${SORT==="cost"?"":`${CRIT[SORT].head(best,n)}。<br>`}
     移動の合計 <b>${best.cost}分</b>（1人あたり ${Math.round(best.cost/n)}分）。<br>
     <span class="tag">行きは 19:00 に会社または自宅を出て、帰りは ${fmt(j.back_depart)} に飲み会の駅を出たときの所要時間です。
     飲み屋 ${best.bars}軒${best.median_m?`・店まで中央値 ${best.median_m}m`:""}・${best.lines}路線。</span></div>`;
@@ -773,9 +811,9 @@ function renderDetail(d,r){
     <h2 style="margin-top:12px">人を押すと乗り換えと経路が出ます</h2>
     ${d.routes.map((x,i)=>`<div class="who${SELP===i?" on":""}" data-i="${i}" style="--pc:${pcol(i)}">
         <div style="font-size:13px"><span class="chev">▼</span><i class="dot"></i><b>${x.name}</b>
-          <span class="tag">${x.from==="office"?`${x.origin}の会社から`:"自宅から"}・計 ${r.times[i]+Math.max(r.back[i],0)}分</span></div>
+          <span class="tag">${x.from==="office"?`${x.origin}の会社から`:"自宅から"}・計 ${r.times[i]+Math.max(r.back[i],0)}分・終電 ${x.limit_s}</span></div>
         <div class="tag"><b>行き</b> ${r.times[i]}分：${legText(x.go)}</div>
-        <div class="tag"><b>帰り</b> ${r.back[i]<0?"-":r.back[i]+"分"}：${legText(x.back)}</div>
+        <div class="tag"><b>帰り</b> ${r.back[i]<0?"-":r.back[i]+"分"}（乗り換え ${r.xs&&r.xs[i]<9?r.xs[i]:"-"}回）：${legText(x.back)}</div>
         <div class="acc">${personHTML(i)}</div>
       </div>`).join("")}`;
   $$(".who").forEach(el=>el.onclick=()=>selectPerson(+el.dataset.i));

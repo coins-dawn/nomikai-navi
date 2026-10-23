@@ -79,10 +79,32 @@ def detail(payload):
             "bars": bars_near(n["lat"], n["lon"]), "routes": routes, "tight": tight}
 
 
+# 何を優先して駅を選ぶか。どれも同じ順位なら移動時間の合計が少ない駅を先に（engine-static.js の SORT_KEY と同じ）
+SORT_KEY = {
+    "cost":   lambda r: (r["cost"],),                          # 移動時間（行き＋帰り）の合計が少ない
+    "stay":   lambda r: (-r["min_limit"], r["cost"]),          # いちばん早い人の終電が遅い
+    "simple": lambda r: (r["max_x"], r["sum_x"], r["cost"]),   # 帰りの乗り換えが少ない
+    "work":   lambda r: (r["max"], r["cost"]),                 # いちばん遠い人の行きが短い
+}
+_BACK_PATHS = {}
+
+
+def back_transfers(cand, home):
+    """候補駅から自宅へ帰るときの乗り換え回数。静的版と同じ site/data/back の経路から数える（無ければ 9）。"""
+    if cand == home:
+        return 0
+    if cand not in _BACK_PATHS:
+        f = ROOT / "site" / "data" / "back" / f"{cand}.json"
+        _BACK_PATHS[cand] = json.loads(f.read_text()) if f.exists() else {}
+    legs = _BACK_PATHS[cand].get(str(home))
+    return max(sum(1 for rw, _, _ in legs if rw >= 0) - 1, 0) if legs else 9
+
+
 def search(payload):
     depart = payload.get("depart", DEFAULT_DEPART)
     people = payload["people"]
     min_bars = payload.get("min_bars", 30)
+    sort = payload.get("sort", "cost")
     max_travel = payload.get("max_travel", 90)
 
     def node_of(name):
@@ -117,22 +139,24 @@ def search(payload):
             back = [fw[h] - BACK_DEPART if fw[h] < 10**6 else -1 for h in ids]
             if min(back) >= 0:
                 cost = sum(times) + sum(back)
+        xs = [back_transfers(i, h) for h in ids]
         rows.append({
             "id": n["id"],
             "name": n["name"], "bars": n["bars"], "median_m": n["median_m"], "lines": n["lines"],
             "lat": n["lat"], "lon": n["lon"],
             "times": times, "back": back, "cost": cost, "limits": limits, "stay": stay,
+            "xs": xs, "max_x": max(xs), "sum_x": sum(xs),
             "min_stay": min(stay), "min_limit": min(limits),
             "sum": sum(times), "max": max(times),
             "tight": limits.index(min(limits)),
         })
 
     pool = [r for r in rows if r["bars"] >= min_bars and r["max"] <= max_travel and r["cost"] is not None]
-    ok = sorted(pool, key=lambda r: r["cost"])[:5]
+    ok = sorted(pool, key=SORT_KEY.get(sort, SORT_KEY["cost"]))[:5]
     return {
         "people": [{"name": p.get("name") or p["station"], "home": p["station"], "from": p.get("from"),
                     "where": labels[i]} for i, p in enumerate(people)],
-        "depart": depart, "back_depart": BACK_DEPART,
+        "depart": depart, "back_depart": BACK_DEPART, "sort": sort,
         "candidates": ok,
         "all": rows,
         # 比較用: 前の方式（いちばん早い人がいちばん長くいられる駅）

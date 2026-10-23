@@ -18,7 +18,7 @@ function stationId(name){
 async function rowOf(p){
   const id = stationId(p.station);
   const home = await get(`home/${id}.json`);
-  return {id, limit:home.limit, travel:home.travel, back:home.back, back_depart:home.back_depart,
+  return {id, limit:home.limit, travel:home.travel, back:home.back, back_x:home.back_x, back_depart:home.back_depart,
           route:() => get(`route/${id}.json`)};
 }
 
@@ -46,7 +46,7 @@ const API = {
     };
   },
 
-  async search({people, depart, min_bars, max_travel}){
+  async search({people, depart, min_bars, max_travel, sort = "cost"}){
     // 自宅の行（終電・帰りの所要時間）と、行きの出発地の行（会社から来る人は会社の駅）
     const rows = [], from = [];
     for (const p of people){
@@ -65,17 +65,19 @@ const API = {
       const back = rows.map(r => r.back ? r.back[i] : -1);
       const cost = back.some(v => v < 0) ? null
         : times.reduce((a,b)=>a+b,0) + back.reduce((a,b)=>a+b,0);
+      // 帰りの乗り換え回数（経路が組めなかった人は数えようがないので多めに 9 とする）
+      const xs = rows.map(r => r.back_x && r.back_x[i] >= 0 ? r.back_x[i] : 9);
       all.push({id:s.id, name:s.n, bars:s.b, median_m:s.m, lines:s.l, lat:s.lat, lon:s.lon,
-                times, back, cost, limits, stay, min_stay:Math.min(...stay), min_limit:Math.min(...limits),
+                times, back, cost, limits, stay, xs, max_x:Math.max(...xs), sum_x:xs.reduce((a,b)=>a+b,0), min_stay:Math.min(...stay), min_limit:Math.min(...limits),
                 sum:times.reduce((a,b)=>a+b,0), max:Math.max(...times),
                 tight:limits.indexOf(Math.min(...limits))});
     });
     const pool = all.filter(r => r.bars >= min_bars && r.max <= max_travel && r.cost != null);
-    const ok = pool.slice().sort((a,b) => a.cost - b.cost).slice(0,5);
+    const ok = pool.slice().sort((a,b) => cmp(SORT_KEY[sort] || SORT_KEY.cost, a, b)).slice(0,5);
     return {
       people: people.map(p => ({name:p.name || p.station, home:p.station, from:p.from,
                                 where: p.from === "office" ? `${p.office}駅（会社）` : `${p.station}駅（自宅）`})),
-      depart, back_depart: rows[0].back_depart, candidates: ok, all,
+      depart, back_depart: rows[0].back_depart, sort, candidates: ok, all,
       // 比較用: 前の方式（いちばん早い人がいちばん長くいられる駅）
       by_stay: pool.length ? pool.reduce((a,b) => b.min_stay > a.min_stay ? b : a) : null,
       n_all: all.length, n_ok: ok.length,
@@ -106,6 +108,18 @@ const API = {
   },
 };
 let ROWS = [];
+/* 何を優先して駅を選ぶか。どれも同じ順位なら移動時間の合計が少ない駅を先に（server.py の SORT_KEY と同じ） */
+const SORT_KEY = {
+  cost:   r => [r.cost],                      // 移動時間（行き＋帰り）の合計が少ない
+  stay:   r => [-r.min_limit, r.cost],        // いちばん早い人の終電が遅い（＝その人が遅くまでいられる）
+  simple: r => [r.max_x, r.sum_x, r.cost],    // 帰りの乗り換えが少ない（いちばん多い人の回数、次に合計）
+  work:   r => [r.max, r.cost],               // いちばん遠い人の行きが短い（＝その人が遅くまで仕事できる）
+};
+const cmp = (key, a, b) => {
+  const x = key(a), y = key(b);
+  for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] - y[i];
+  return 0;
+};
 const hhmm = v => `${String(Math.floor(v/60)%24).padStart(2,"0")}:${String(v%60).padStart(2,"0")}`;
 window.API = API;
 })();
