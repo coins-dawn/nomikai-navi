@@ -152,6 +152,10 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 .day .diff{font-size:11px;color:var(--warn);margin-left:6px}
 .day .diff.best{color:var(--accent2)}
 .day.first{border-color:var(--accent);background:#f1f6fe}
+.who{border:1px solid var(--line);border-left:4px solid var(--pc);border-radius:8px;padding:7px 9px;margin-bottom:7px;cursor:pointer}
+.who:hover{background:var(--panel2)}
+.who.on{border-color:var(--pc);box-shadow:0 0 0 2px var(--pc) inset;background:#fff}
+.who .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--pc);margin-right:5px}
 .back{background:none;border:none;color:var(--accent-ink);padding:0 0 8px;font-size:13px}
 .pin.p-date{flex-direction:column;gap:2px}
 .pin.p-date span{background:var(--accent);color:#fff;text-align:center;line-height:1.35;padding:3px 6px;font-size:12px}
@@ -264,6 +268,7 @@ let DEPART=19*60;      // 集合時刻は 19:00 に固定（事前計算の都�
 const BARS_OK=30;      // これだけ飲み屋があれば「飲み会ができる駅」として候補にする
 const MAX_TRAVEL=90;   // 片道がこれを超える駅はおすすめに出さない（会場が遠くに引きずられるのを防ぐ）
 const MAPDIM="#ffffff";
+let SELP=null;   // 3 の画面で選んでいる参加者（経路を強調する）
 let META=null,RESULT=null,SEL=null,MAP=null,DETAIL=null,MARKERS=[],HOVER=null,GEO={},FIT=false;
 /* サンプル: 5 人・候補日 6 日。week は月〜金の出社（1＝会社から）。over はその日だけの例外 */
 const SAMPLE={
@@ -304,7 +309,8 @@ function initMap(){
     // 路線網（公式のラインカラー。あくまで背景なので細く薄く）
     MAP.addSource("rails",{type:"geojson",data:empty()});
     MAP.addLayer({id:"rail-line",type:"line",source:"rails",
-      paint:{"line-color":["coalesce",["get","color"],"#7d858f"],"line-opacity":.3,
+      // 路線はすべて灰色（色が付くのは参加者の経路だけ。2026-10-23 ユーザー指示）
+      paint:{"line-color":"#bdb9b2","line-opacity":.8,
         "line-width":["interpolate",["linear"],["zoom"],8,.9,11,1.8,15,3.4]},
       layout:{"line-cap":"round","line-join":"round"}});
     // 全駅。計算後は「いちばん早い人の終電」で色を塗る
@@ -315,33 +321,32 @@ function initMap(){
         "circle-radius":["interpolate",["linear"],["zoom"],8,1.6,11,2.6,15,4.5],
         "circle-stroke-color":"#ffffff",
         "circle-stroke-width":["interpolate",["linear"],["zoom"],8,.4,11,.8,15,1.4]}});
-    MAP.on("click","st-dot",e=>selectStation(e.features[0].properties.name));
-    MAP.on("mouseenter","st-dot",e=>{MAP.getCanvas().style.cursor="pointer"});
-    MAP.on("mouseleave","st-dot",()=>{MAP.getCanvas().style.cursor="";if(HOVER){HOVER.remove();HOVER=null}});
+    MAP.on("mouseleave","st-dot",()=>{if(HOVER){HOVER.remove();HOVER=null}});
     MAP.on("mousemove","st-dot",e=>{
       const p=e.features[0].properties;
       if(HOVER) HOVER.remove();
       HOVER=new maplibregl.Popup({closeButton:false,closeOnClick:false,offset:8})
         .setLngLat(e.lngLat)
-        .setHTML(p.limit?`<b>${p.name}</b><br>いちばん早い人の終電 ${p.limit}<br>
-          <span style="opacity:.7">飲み屋 ${p.bars}軒・滞在 ${p.stay}分</span>`
-                        :`<b>${p.name}</b><br><span style="opacity:.7">全員が帰れる組み合わせなし</span>`)
+        .setHTML(`<b>${p.name}</b><br><span style="opacity:.7">飲み屋 ${p.bars}軒</span>`)
         .addTo(MAP);
     });
     MAP.addSource("routes",{type:"geojson",data:empty()});
-    // 行き（19:00 に会社か自宅を出る）は細く薄く、帰り（21:30 に飲み会の駅を出る）は太く
-    const W=["case",["==",["get","dir"],"go"],2.5,4];
+    // 行き（19:00 に会社か自宅を出る）は細く、帰り（21:30 に飲み会の駅を出る）は太く。
+    // 右の一覧で人を選ぶと、その人の経路を太く濃くし、ほかの人の経路は薄くする（hl: 1＝選択中, -1＝ほか, 0＝選択なし）
+    const HL=["get","hl"];
+    const W=["+",["case",["==",["get","dir"],"go"],2.5,4],["case",["==",HL,1],2.5,0]];
+    const OP=["case",["==",HL,-1],.12,["==",HL,1],1,["==",["get","dir"],"go"],.6,.95];
     MAP.addLayer({id:"route-case",type:"line",source:"routes",
-      paint:{"line-color":"#fff","line-opacity":.9,"line-width":["+",W,3]},
-      layout:{"line-cap":"round","line-join":"round"}});
+      paint:{"line-color":"#fff","line-opacity":["case",["==",HL,-1],0,.9],"line-width":["+",W,3]},
+      layout:{"line-cap":"round","line-join":"round","line-sort-key":HL}});
     MAP.addLayer({id:"route-other",type:"line",source:"routes",
       filter:["!=",["get","kind"],"walk"],
-      paint:{"line-color":["get","color"],"line-width":W,"line-opacity":["case",["==",["get","dir"],"go"],.6,.95]},
-      layout:{"line-cap":"round","line-join":"round"}});
+      paint:{"line-color":["get","color"],"line-width":W,"line-opacity":OP},
+      layout:{"line-cap":"round","line-join":"round","line-sort-key":HL}});
     MAP.addLayer({id:"route-walk",type:"line",source:"routes",
       filter:["==",["get","kind"],"walk"],
-      paint:{"line-color":["get","color"],"line-width":W,"line-dasharray":[1,1.6]},
-      layout:{"line-cap":"round","line-join":"round"}});
+      paint:{"line-color":["get","color"],"line-width":W,"line-opacity":OP,"line-dasharray":[1,1.6]},
+      layout:{"line-cap":"round","line-join":"round","line-sort-key":HL}});
   });
 }
 const empty=()=>({type:"FeatureCollection",features:[]});
@@ -362,7 +367,7 @@ function drawDetail(d){
       const co=legCoords(l).map(p=>[p[1],p[0]]);
       if(co.length<2) return;
       feats.push({type:"Feature",geometry:{type:"LineString",coordinates:co},
-        properties:{color:pcol(i),dir,kind:l.kind,who:r.name,line:l.line}});
+        properties:{color:pcol(i),dir,kind:l.kind,who:r.name,line:l.line,hl:SELP==null?0:SELP===i?1:-1}});
     }));
   });
   MAP.getSource("routes").setData({type:"FeatureCollection",features:feats});
@@ -400,9 +405,7 @@ function pinList(){
     out.push({kind:"home",st:p.station,color:c,label:`${p.station}（自宅）`});
     if(p.from==="office") out.push({kind:"office",st:p.office,color:c,label:`${p.office}（会社）`});
   });
-  RESULT.candidates.forEach((r,i)=>out.push({kind:"cand",st:r.name,rank:i+1,label:r.name}));
-  // 候補の外の駅を地図でクリックしたときは、その駅も目印を付ける
-  if(SEL&&!RESULT.candidates.some(r=>r.name===SEL)) out.push({kind:"cand",st:SEL,rank:"・",label:SEL});
+  if(SEL) out.push({kind:"cand",st:SEL,rank:"",label:SEL});   // 飲み会の駅（2 の画面で決めた 1 つだけ）
   return out;
 }
 const pinPoints=()=>pinList().map(x=>geoByName(x.st)).filter(Boolean).map(g=>[g.lat,g.lon]);
@@ -440,12 +443,13 @@ function drawLegend(d){
     <div class="lrow"><span class="lg-office"></span> 会社の最寄り駅</div>
     <p class="tag" style="font-size:10px">日付のカードか地図のラベルを押すと、その日の駅選びに進みます。</p>`;return}
   if(!RESULT){L.innerHTML=`<h3>関東の鉄道</h3>`;return}
-  L.innerHTML=`<div class="lrow"><span class="lg-cand">1</span> 候補の駅（移動の合計が少ない順）</div>
+  L.innerHTML=`<div class="lrow"><span class="lg-cand"></span> 飲み会の駅</div>
     <div class="lrow"><span class="lg-home"></span> 自宅の最寄り駅</div>
     <div class="lrow"><span class="lg-office"></span> 会社の最寄り駅</div>
     ${d?`<hr><h3>${d.station} への行きと帰り</h3>
     ${d.routes.map((r,i)=>`<div class="lrow"><s style="background:${pcol(i)};height:4px"></s> ${r.name}</div>`).join("")}
-    <p class="tag" style="font-size:10px">細い線＝行き（19:00 発）、太い線＝帰り（21:30 発）。点線は徒歩</p>`:""}`;
+    <p class="tag" style="font-size:10px">細い線＝行き（19:00 発）、太い線＝帰り（21:30 発）。点線は徒歩。
+    右の一覧で人を選ぶと、その人の経路が強調されます。</p>`:""}`;
 }
 
 /* 路線網と全駅を敷く（検索前から出す） */
@@ -681,29 +685,20 @@ async function openDay(d){
 }
 
 function render(){
-  const j=RESULT,c=j.candidates;
-  if(!c.length){$("#list").innerHTML=`<div class="empty">条件に合う駅がありません。しきい値をゆるめてください。</div>`;
-    $("#banner").innerHTML="";$("#detail").innerHTML="";return}
-  const best=c[0],n=j.people.length;
-  $("#banner").innerHTML=`<div class="banner">全員の移動時間の合計がいちばん少ないのは <b>${best.name}</b>：
-    合計 <b>${best.cost}分</b>（1人あたり ${Math.round(best.cost/n)}分）。
-    行きは 19:00 に会社または自宅を出て、帰りは ${fmt(j.back_depart)} に飲み会駅を出たときの所要時間です。
-</div>`;
-  $("#list").innerHTML=c.map((r,i)=>`<div class="cand ${r.name===SEL?"sel":""}" data-n="${r.name}">
-      <div class="rank">${i+1}</div>
-      <div><div class="nm">${r.name}</div>
-        <div class="meta">飲み屋 ${r.bars}軒${r.median_m?`・店まで中央値${r.median_m}m`:""} ・${r.lines}路線
-          ・いちばん早い終電 ${fmt(r.min_limit)}（${j.people[r.tight].name}）</div></div>
-      <div class="stay"><b>${r.cost}分</b><div>移動の合計</div></div></div>`).join("");
-  $$(".cand").forEach(el=>el.onclick=()=>selectStation(el.dataset.n));
+  const j=RESULT,best=j.all.find(r=>r.name===SEL),n=j.people.length;
+  $("#list").innerHTML="";
+  $("#banner").innerHTML=best?`<div class="banner"><b>${dlabel(CHOSEN.iso)}</b> は <b>${best.name}</b> に集まります。
+    移動の合計 <b>${best.cost}分</b>（1人あたり ${Math.round(best.cost/n)}分）。<br>
+    <span class="tag">行きは 19:00 に会社または自宅を出て、帰りは ${fmt(j.back_depart)} に飲み会の駅を出たときの所要時間です。
+    飲み屋 ${best.bars}軒${best.median_m?`・店まで中央値 ${best.median_m}m`:""}・${best.lines}路線。</span></div>`:"";
 }
 
-/* 地図の駅をクリックしても、右の一覧から選んでも、ここに来る */
+/* 2 の画面で決めた駅を開く */
 async function selectStation(name){
   if(!RESULT) return;
   const r=RESULT.all.find(x=>x.name===name);
   if(!r){$("#detail").innerHTML=`<div class="empty">${name} は、全員が帰れる組み合わせがありません。</div>`;return}
-  SEL=name; render(); paintStations(RESULT);
+  SEL=name; SELP=null; render(); paintStations(RESULT);
   $("#detail").innerHTML=`<div class="tag" style="padding:8px">${name} の経路を組み立て中…</div>`;
   const d=await API.detail({people:RESULT._people,station:name,depart:RESULT.depart});
   if(d.error){$("#detail").innerHTML=`<div class="empty">${d.error}</div>`;return}
@@ -721,13 +716,18 @@ function renderDetail(d,r){
     <tr><td><b>合計</b></td><td>${r.sum}分</td><td>${r.cost==null?"-":r.cost-r.sum+"分"}</td><td><b>${r.cost==null?"-":r.cost+"分"}</b></td></tr>
     </tbody></table>
     ${r.cost==null?`<div class="tag">飲み屋が少ない駅なので、帰りの所要時間は計算していません。</div>`:""}
-    <h2 style="margin-top:12px">行きと帰りの経路</h2>
-    ${d.routes.map((x,i)=>`<div style="margin-bottom:9px;border-left:3px solid ${pcol(i)};padding-left:8px">
-        <div style="font-size:13px"><b>${x.name}</b>
+    <h2 style="margin-top:12px">各人の経路 <span class="tag">（押すと地図で強調）</span></h2>
+    ${d.routes.map((x,i)=>`<div class="who${SELP===i?" on":""}" data-i="${i}" style="--pc:${pcol(i)}">
+        <div style="font-size:13px"><i class="dot"></i><b>${x.name}</b>
           <span class="tag">終電 ${x.limit_s}</span></div>
         <div class="tag"><b>行き</b> ${x.origin}（${x.from==="office"?"会社":"自宅"}）19:00 発 ${r.times[i]}分：${legText(x.go)}</div>
         <div class="tag"><b>帰り</b> 21:30 発 ${r.back[i]<0?"-":r.back[i]+"分"}：${legText(x.back)}</div>
       </div>`).join("")}`;
+  $$(".who").forEach(el=>el.onclick=()=>{
+    const i=+el.dataset.i; SELP=SELP===i?null:i;      // もう一度押すと解除
+    $$(".who").forEach(w=>w.classList.toggle("on",+w.dataset.i===SELP));
+    drawDetail(DETAIL);
+  });
 }
 boot();
 </script>

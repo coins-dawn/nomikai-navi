@@ -15,7 +15,7 @@ async def setup(pg, initial=False):
     await pg.click("#compare")
     await pg.wait_for_selector(".day", timeout=90000)
     await pg.locator(".day").first.click()
-    await pg.wait_for_selector(".cand", timeout=90000)
+    await pg.wait_for_selector(".who", timeout=90000)
     await pg.wait_for_timeout(7000)
 
 
@@ -35,7 +35,7 @@ async def shoot(scheme, suffix, zoom_in):
             await pg.locator("#mapwrap").screenshot(path=f"docs/12-bars{suffix}.png")
         else:
             await pg.screenshot(path=f"docs/10-map{suffix}.png")
-            await pg.locator(".cand").nth(2).click()
+            await pg.locator(".who").nth(2).click()
             await pg.wait_for_timeout(6000)
             await pg.screenshot(path=f"docs/11-map-other{suffix}.png")
         print("console errors:", errs[:6] or "なし")

@@ -62,7 +62,7 @@ async def static_top():
         await pg.click("#compare")                 # 2. 日付を比べる
         await pg.wait_for_selector(".day", timeout=60000)
         await pg.locator(".day").first.click()      # 3. いちばん移動が少ない日の駅選び
-        await pg.wait_for_selector(".cand", timeout=60000)
+        await pg.wait_for_selector(".who", timeout=60000)
         await pg.wait_for_timeout(5000)
         rows = await pg.evaluate("() => RESULT.candidates.map(c => [c.name, c.cost, c.min_limit, c.min_stay])")
         people = await pg.evaluate("() => RESULT._people.map(({ci, ...p}) => p)")
