@@ -39,6 +39,7 @@ python3 scripts/shot.py dark          # 画面キャプチャ
 | 列車時刻表・駅情報・ラインカラー（鉄道 10 事業者 65 路線） | 公共交通オープンデータセンター | 事業者ごとに異なる（下記） |
 | 飲食店の位置、線路の線形 | OpenStreetMap | ODbL |
 | 地図の下地 | OpenFreeMap / OpenMapTiles / OpenStreetMap | — |
+| 地図の目印のアイコン（家・ビル・ジョッキ） | Material Design Icons（Pictogrammers） | Apache-2.0 |
 
 - **東京都交通局**: CC BY 4.0
 - **東京メトロ・つくばエクスプレス・東京臨海高速鉄道・多摩都市モノレール・横浜市交通局**:

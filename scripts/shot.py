@@ -14,7 +14,6 @@ async def setup(pg, initial=False):
     await pg.wait_for_timeout(2500)
     await pg.click("#compare")
     await pg.wait_for_selector(".day", timeout=90000)
-    await pg.locator(".day").first.click()
     await pg.wait_for_selector(".who", timeout=90000)
     await pg.wait_for_timeout(7000)
 

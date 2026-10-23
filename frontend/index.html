@@ -185,17 +185,20 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 /* 地図の目印（自宅・会社・候補駅）。印＋駅名のラベル */
 .pin{display:flex;align-items:center;gap:4px;pointer-events:auto;cursor:pointer}
 .pin i{flex:0 0 auto;display:block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
-.pin.p-home i{width:13px;height:13px;border-radius:50%}
-.pin.p-office i{width:12px;height:12px;border-radius:2px}
-.pin.p-cand i{width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font:700 11px/16px sans-serif;
-  text-align:center;font-style:normal}
-.pin.p-cand.sel i{width:26px;height:26px;line-height:22px;font-size:13px;background:#154f9e}
+.pin i svg{width:100%;height:100%;display:block;fill:#fff}
+/* 自宅＝一軒家・会社＝ビル（参加者の色）、飲み会の駅＝ジョッキ（青）。アイコンは Material Design Icons（Apache-2.0） */
+.pin.p-home i,.pin.p-office i{width:21px;height:21px;padding:2.5px}
+.pin.p-home i{border-radius:50%}
+.pin.p-office i{border-radius:5px}
+.pin.p-cand i{width:30px;height:30px;padding:4px;border-radius:50%;background:var(--accent)}
+.pin.p-cand.sel i{background:#154f9e}
 .pin span{font-size:11px;font-weight:700;color:var(--fg);background:rgba(255,255,255,.92);padding:0 5px;
   border-radius:4px;white-space:nowrap;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
 .pin.p-cand.sel span{font-size:12.5px}
-.lg-home{width:11px;height:11px;border-radius:50%;background:#77716a;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
-.lg-office{width:10px;height:10px;border-radius:2px;background:#77716a;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
-.lg-cand{width:15px;height:15px;border-radius:50%;background:var(--accent);color:#fff;font:700 9px/15px sans-serif;text-align:center}
+.lg-home,.lg-office,.lg-cand{display:inline-block;width:16px;height:16px;padding:2px;background:#77716a;border-radius:50%;flex:0 0 auto}
+.lg-office{border-radius:4px}
+.lg-cand{width:18px;height:18px;background:var(--accent)}
+.lg-home svg,.lg-office svg,.lg-cand svg{width:100%;height:100%;display:block;fill:#fff}
 .maplibregl-popup-content{background:var(--panel);color:var(--fg);border:1px solid var(--line);box-shadow:0 2px 8px rgba(0,0,0,.12);
   border-radius:8px;font-size:12px;padding:7px 10px}
 .maplibregl-popup-tip{border-top-color:var(--panel)!important;border-bottom-color:var(--panel)!important}
@@ -292,6 +295,13 @@ const SAMPLE={
     {home:"聖蹟桜ヶ丘",office:"新宿",week:[1,1,0,0,0],over:{}},
   ]};
 const WD="日月火水木金土";
+/* 地図の目印のアイコン（Material Design Icons, Apache-2.0。https://pictogrammers.com/ ） */
+const svgOf=d=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+const ICON={
+  home:svgOf("m12 3l8 6v12h-5v-7H9v7H4V9z"),                                                           // mdi:home-variant
+  office:svgOf("M5 3v18h6v-3.5h2V21h6V3zm2 2h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm8 0h2v2h-2z"),   // mdi:office-building
+  cand:svgOf("M9.5 3C7.56 3 5.85 4.24 5.23 6.08A3.996 3.996 0 0 0 6 14v8h11v-2h3c.55 0 1-.45 1-1v-8c0-.55-.45-1-1-1h-2V8c0-2.21-1.79-4-4-4h-1.68c-.82-.65-1.79-1-2.82-1m0 2c.79 0 1.53.37 2 1H14a2 2 0 0 1 2 2h-4c-2 0-2.68 1.13-3.5 2.63S6 12 6 12c-1.11 0-2-.89-2-2a2 2 0 0 1 2-2h1v-.5A2.5 2.5 0 0 1 9.5 5m7.5 7h2v6h-2Z"),   // mdi:glass-mug-variant
+};
 let STATE={dates:[],people:[]}, STEP=1, DAYS=null, CHOSEN=null;
 
 /* ---------- 地図 ---------- */
@@ -347,20 +357,32 @@ function initMap(){
     const HL=["get","hl"];
     const W=["+",["case",["==",["get","dir"],"go"],2.5,4],["case",["==",HL,1],2.5,0]];
     const OP=["case",["==",HL,-1],.12,["==",HL,1],1,["==",["get","dir"],"go"],.6,.95];
+    // 進行方向の左にずらす（行きと帰りが同じ線路を逆向きに通っても重ならない。line-offset は正が右）
+    const OFF=["-",0,["+",["/",W,2],1.5]];
     MAP.addLayer({id:"route-case",type:"line",source:"routes",
-      paint:{"line-color":"#fff","line-opacity":["case",["==",HL,-1],0,.9],"line-width":["+",W,3]},
+      paint:{"line-color":"#fff","line-opacity":["case",["==",HL,-1],0,.9],"line-width":["+",W,3],"line-offset":OFF},
       layout:{"line-cap":"round","line-join":"round","line-sort-key":HL}});
     MAP.addLayer({id:"route-other",type:"line",source:"routes",
       filter:["!=",["get","kind"],"walk"],
-      paint:{"line-color":["get","color"],"line-width":W,"line-opacity":OP},
+      paint:{"line-color":["get","color"],"line-width":W,"line-opacity":OP,"line-offset":OFF},
       layout:{"line-cap":"round","line-join":"round","line-sort-key":HL}});
     MAP.addLayer({id:"route-walk",type:"line",source:"routes",
       filter:["==",["get","kind"],"walk"],
-      paint:{"line-color":["get","color"],"line-width":W,"line-opacity":OP,"line-dasharray":[1,1.6]},
+      paint:{"line-color":["get","color"],"line-width":W,"line-opacity":OP,"line-dasharray":[1,1.6],"line-offset":OFF},
       layout:{"line-cap":"round","line-join":"round","line-sort-key":HL}});
+    // 進む向きが分かるよう、経路の上に白い破線を流す（薄くしている人の経路には流さない）
+    MAP.addLayer({id:"route-flow",type:"line",source:"routes",
+      filter:["all",["!=",["get","kind"],"walk"],["!=",HL,-1]],
+      paint:{"line-color":"#fff","line-opacity":.85,"line-width":["*",W,.45],"line-offset":OFF,"line-dasharray":FLOW[0]},
+      layout:{"line-join":"round","line-sort-key":HL}});
+    let k=0;
+    setInterval(()=>{if(!document.hidden&&MAP.getLayer("route-flow"))MAP.setPaintProperty("route-flow","line-dasharray",FLOW[k=(k+1)%FLOW.length])},70);
   });
 }
 const empty=()=>({type:"FeatureCollection",features:[]});
+/* 破線の模様をずらしていくと、線の向き（座標の並び＝進む向き）に流れて見える */
+const FLOW=[[0,4,3],[.5,4,2.5],[1,4,2],[1.5,4,1.5],[2,4,1],[2.5,4,.5],[3,4,0],
+  [0,.5,3,3.5],[0,1,3,3],[0,1.5,3,2.5],[0,2,3,2],[0,2.5,3,1.5],[0,3,3,1],[0,3.5,3,.5]].map(a=>a.map(v=>v*2));
 function clearMarkers(){MARKERS.forEach(m=>m.remove());MARKERS=[]}
 function marker(lat,lon,cls,html){
   const el=document.createElement("div"); el.className="mk "+cls;
@@ -436,12 +458,12 @@ function drawPins(){
     // 候補は都心に固まるので、名前を出すのは選んだ駅だけ（ほかは一覧と同じ番号）
     if(x.kind==="date") el.onclick=()=>{const d=DAYS.find(d=>d.best&&d.best.name===x.st);if(d)openDay(d)};
     el.innerHTML=x.kind==="date"?`<span>${x.html}</span><i></i>`
-      :x.kind==="cand"?`<i>${x.rank}</i>${sel?`<span>${x.label}</span>`:""}`
-      :`<i style="background:${x.color}"></i><span>${x.label}</span>`;
+      :x.kind==="cand"?`<i>${ICON.cand}</i>${sel?`<span>${x.label}</span>`:""}`
+      :`<i style="background:${x.color}">${ICON[x.kind]}</i><span>${x.label}</span>`;
     const k=g.id+x.kind; const n=at[k]=(at[k]||0)+1;
     // 日付の札は点の上に立てる（横に長いと隣の駅の札と重なるので縦に積む）
     const m=x.kind==="date"?new maplibregl.Marker({element:el,anchor:"bottom",offset:[0,8]}).setLngLat([g.lon,g.lat])
-      :new maplibregl.Marker({element:el,anchor:"left",offset:[-8,(n-1)*16]}).setLngLat([g.lon,g.lat]);
+      :new maplibregl.Marker({element:el,anchor:"left",offset:[x.kind==="cand"?-15:-11,(n-1)*22]}).setLngLat([g.lon,g.lat]);
     if(x.kind==="date") el.style.zIndex=3;
     if(x.kind==="cand"&&x.st===SEL) el.style.zIndex=3; else if(x.kind==="cand") el.style.zIndex=2;
     m.addTo(MAP); MARKERS.push(m);
@@ -452,13 +474,13 @@ function drawPins(){
 function drawLegend(d){
   const L=$("#legend"); L.style.display="";
   if(STEP===2&&!CHOSEN){L.innerHTML=`<div class="lrow"><span class="mark" style="background:var(--accent);color:#fff;border:none">駅：日付</span> その日の最適な駅</div>
-    <div class="lrow"><span class="lg-home"></span> 自宅の最寄り駅</div>
-    <div class="lrow"><span class="lg-office"></span> 会社の最寄り駅</div>
+    <div class="lrow"><span class="lg-home">${ICON.home}</span> 自宅の最寄り駅</div>
+    <div class="lrow"><span class="lg-office">${ICON.office}</span> 会社の最寄り駅</div>
     <p class="tag" style="font-size:10px">左の候補か地図のラベルを押すと、各人の移動が出ます。</p>`;return}
   if(!RESULT){L.innerHTML=`<h3>関東の鉄道</h3>`;return}
-  L.innerHTML=`<div class="lrow"><span class="lg-cand"></span> 飲み会の駅</div>
-    <div class="lrow"><span class="lg-home"></span> 自宅の最寄り駅</div>
-    <div class="lrow"><span class="lg-office"></span> 会社の最寄り駅</div>
+  L.innerHTML=`<div class="lrow"><span class="lg-cand">${ICON.cand}</span> 飲み会の駅</div>
+    <div class="lrow"><span class="lg-home">${ICON.home}</span> 自宅の最寄り駅</div>
+    <div class="lrow"><span class="lg-office">${ICON.office}</span> 会社の最寄り駅</div>
     ${d?`<hr><h3>${d.station} への行きと帰り</h3>
     ${d.routes.map((r,i)=>`<div class="lrow"><s style="background:${pcol(i)};height:4px"></s> ${r.name}</div>`).join("")}
     <p class="tag" style="font-size:10px">細い線＝行き（19:00 発）、太い線＝帰り（21:30 発）。点線は徒歩。
@@ -556,7 +578,11 @@ function steps(){
 function go(k){
   STEP=k; steps();
   $("#step1").hidden=k!==1; $("#app").hidden=k===1;
-  if(k===2){layout();showDays()}
+  if(k===2){
+    layout();showDays();
+    // 最初は一番上の候補を開いておく（地図に経路が出ている状態から始める）
+    if(!CHOSEN&&DAYS[0]&&DAYS[0].best) openDay(DAYS[0],true);
+  }
   window.scrollTo(0,0);
 }
 /* 候補を選ぶと右の列が開く */
@@ -690,7 +716,7 @@ $("#closeP").onclick=closeDay;
 
 /* 候補（日付と駅）を選ぶ */
 let OPENING=0;
-async function openDay(d){
+async function openDay(d,auto){
   const tok=++OPENING;
   CHOSEN=d; SELP=null; layout();
   $$(".day").forEach(el=>el.classList.toggle("hl",DAYS[+el.dataset.k]===d));
@@ -705,7 +731,7 @@ async function openDay(d){
   if(det.error){$("#detail").innerHTML=`<div class="empty">${det.error}</div>`;return}
   paintStations(j); FIT=true;
   render(r); drawDetail(det); renderDetail(det,r);
-  if(window.innerWidth<=1100) $("#ppl").scrollIntoView({behavior:"smooth"});
+  if(!auto&&window.innerWidth<=1100) $("#ppl").scrollIntoView({behavior:"smooth"});
 }
 
 function render(best){
