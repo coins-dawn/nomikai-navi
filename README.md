@@ -40,6 +40,7 @@ python3 scripts/shot.py dark          # 画面キャプチャ
 | 飲食店の位置、線路の線形 | OpenStreetMap | ODbL |
 | 地図の下地 | OpenFreeMap / OpenMapTiles / OpenStreetMap | — |
 | 地図の目印のアイコン（家・ビル・ジョッキ） | Material Design Icons（Pictogrammers） | Apache-2.0 |
+| 経路の上を動く人のアイコン（man-dancing・drunk-person。改変なし） | OpenMoji | CC BY-SA 4.0 |
 
 - **東京都交通局**: CC BY 4.0
 - **東京メトロ・つくばエクスプレス・東京臨海高速鉄道・多摩都市モノレール・横浜市交通局**:

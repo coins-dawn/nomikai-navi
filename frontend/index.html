@@ -96,6 +96,7 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 .sw{width:10px;height:10px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 .5px rgba(0,0,0,.35);flex:0 0 auto}
 .legend .lrow{display:flex;align-items:center;gap:5px;margin:1.5px 0}
 .legend p{margin:4px 0 0;line-height:1.5}
+.legend .lrow>span svg{width:100%;height:100%;display:block}
 .legend s{width:18px;height:3px;border-radius:2px;display:inline-block}
 .mk{width:11px;height:11px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
 .mk.sta{width:17px;height:17px;background:#fff;border:4px solid var(--accent);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
@@ -166,6 +167,17 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
 .who .acc{display:none;cursor:default;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
 .who.on .acc{display:block}
 .who .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--pc);margin-right:5px}
+/* 経路の上を動く人（行き＝スキップ、帰り＝千鳥足）。線の少し上に浮かせる */
+.walker{pointer-events:none;width:32px;height:32px;position:relative}
+.walker i{position:absolute;left:50%;bottom:-2px;width:18px;height:6px;margin-left:-9px;border-radius:50%;background:var(--wc);opacity:.9;
+  box-shadow:0 0 0 1.5px #fff}
+.walker span{display:block;width:100%;height:100%;filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #fff) drop-shadow(0 1px 1px rgba(0,0,0,.25))}
+.walker span svg{width:100%;height:100%;display:block}
+.walker.go span{animation:hop .42s ease-out infinite alternate}
+.walker.back span{animation:sway 1.6s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes hop{from{transform:translateY(0)}to{transform:translateY(-7px)}}
+@keyframes sway{0%,100%{transform:rotate(-13deg) translateX(-2px)}50%{transform:rotate(13deg) translateX(2px)}}
+@media(prefers-reduced-motion:reduce){.walker span{animation:none!important}}
 /* その人の詳細: 乗り換えを縦に並べる */
 .trip{margin:6px 0 14px}
 .trip h3{margin:0 0 6px;font-size:13px}
@@ -389,6 +401,41 @@ function initMap(){
   });
 }
 const empty=()=>({type:"FeatureCollection",features:[]});
+/* 経路の上を動く人のアイコン（OpenMoji, CC BY-SA 4.0。https://openmoji.org/ ）。改変せずに使う */
+const WALK_ICON={go:`<svg viewBox="0 0 72 72"><g fill="#fcea2b"><circle cx="33.969" cy="8.094" r="3"/><path d="m42 18l3 18l-1 14l-2.3 17h-3.3l.6-16V38h-2l-5 9l2 11h-3l-4-12l6-14l-2-10l-2.723-1.343S26.68 18.963 26.46 19c-1.135.19-6.081 1.174-6.771 1.125c-2.657-.187-4-2.125-7.688-6.124c-1.463-1.587.375-2.626.375-2.626L19 18l10-2l6-1h6l7 1l12 2s-.016 2.248-2 2z"/></g><g fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="2"><circle cx="33.969" cy="8.094" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="m12.875 12l4.696 4.6c.786.77 2.312 1.224 3.39 1.008l6.078-1.216a40 40 0 0 1 3.955-.545l9.012-.694c1.097-.084 2.88.003 3.964.195L59 18m-30 2l1 1c.55.55 1.176 1.882 1.393 2.96l1.214 6.08c.217 1.077.038 2.787-.394 3.798l-4.426 10.324c-.433 1.01-.502 2.691-.154 3.735l2.734 8.205C30.715 57.147 31.675 58 32.5 58s1.339-.886 1.143-1.968l-1.286-7.064c-.196-1.082.08-2.755.614-3.716l3.057-5.504C36.563 38.788 37.45 38 38 38s1 .9 1 2v9c0 1.1-.034 2.9-.075 3.999l-.45 12.002c-.04 1.1.668 1.999 1.576 1.999c.907 0 1.77-.892 1.918-1.982l1.762-13.036c.148-1.09.333-2.88.412-3.977l.714-10.01c.078-1.097-.013-2.882-.205-3.965L42 19"/></g></svg>`, back:`<svg viewBox="0 0 72 72"><path fill="#fff" d="M21.578 37.31s7.248-7.477 8.621-10.986s-1.678 16.022-1.678 16.022s0 4.12-1.221 3.815s-6.104-5.722-6.257-6.638s.535-2.213.535-2.213"/><path fill="#a57939" d="M19.093 39.105s.625 1 1 2v3l4.125 6l2.875-2l-2.801-5.855s-.926-1.031-1.459-1.27c-1.209-.542-2.001-.501-2.042-.542c-.744-.745-.823-.896-1.073-1.271s-.281-1.125-.969-.469"/><g fill="#fcea2b"><path d="M33.188 25.188L28.3 67h3.3l6.3-27h2.2l-.315 12.8L37.4 67h3.3l4.316-14l1.26-13.125l-.526-12.812s3.438 15.187 4.688 16.375s2.875.468 2.875.468L48.22 22.368a8.6 8.6 0 0 0-.64-1.79l-1.677-3.438a2.65 2.65 0 0 0-1.46-1.321l-1.346-.5a5.6 5.6 0 0 0-3.133-.223l-5.447 1.179a8.54 8.54 0 0 0-5.541 3.993l-5.1 8.607l-6.563 7.688s.159.835 2.562.75c1.75-.063 4.792-4.141 5.375-4.896c1.594-2.062 6.406-11.23 8.063-11.292c.288-.01 0 3.5-.125 4.063"/><circle cx="36.969" cy="8.094" r="3"/></g><g fill="none" stroke="#000" stroke-width="2"><circle cx="36.969" cy="8.094" r="3" stroke-miterlimit="10"/><path stroke-linecap="round" stroke-linejoin="round" d="m44 21l2.036 16.89c.132 1.091.153 2.88.048 3.976l-.877 9.143c-.105 1.096-.456 2.851-.78 3.902L41.289 65.09c-.324 1.049-1.331 1.91-2.238 1.91c-.908 0-1.5-.888-1.315-1.972l1.713-10.056c.185-1.084.359-2.871.386-3.971l.215-8.602c.027-1.1-.446-1.999-1.05-1.999s-1.307.876-1.56 1.947l-5.38 22.707C31.807 66.124 30.857 67 29.95 67c-.908 0-1.547-.895-1.42-1.986L33.5 22"/><path stroke-linecap="round" stroke-linejoin="round" d="m18 36l1.5-1c.825-.55 2.64-2.94 4.035-5.31l4.93-8.38C29.859 18.94 32.8 16.55 35 16s5.8-1 8-1s4.318 2.228 4.707 4.95l.586 4.1c.389 2.722 1.325 7.113 2.081 9.758L53 43m-34-4s.625 1 1 2v3l4.125 6L27 48l-3.333-4.999"/></g></svg>`};   // man-dancing（スキップ）・drunk-person（千鳥足）
+let WALKERS=[], WALK_RAF=null;
+function clearWalkers(){WALKERS.forEach(w=>w.m.remove());WALKERS=[]}
+/* 行き（会社か自宅 → 飲み会の駅）と帰り（飲み会の駅 → 自宅）の経路に 1 人ずつ置き、線に沿って進ませる */
+function placeWalkers(d){
+  clearWalkers();
+  d.routes.forEach((r,i)=>{
+    if(SELP!==i) return;   // 人を選んで経路を強調しているときだけ、その人に出す（全員ぶん出すと分かりにくい。2026-10-23 ユーザー指示）
+    [["go",r.go],["back",r.back]].forEach(([dir,legs])=>{
+      const pts=cleanLine(legs.flatMap(legCoords)).map(p=>[p[1],p[0]]);
+      if(pts.length<2) return;
+      const cum=[0]; for(let k=1;k<pts.length;k++) cum.push(cum[k-1]+Math.hypot(pts[k][0]-pts[k-1][0],(pts[k][1]-pts[k-1][1])));
+      if(cum[cum.length-1]<=0) return;
+      const el=document.createElement("div"); el.className=`walker ${dir}`; el.style.setProperty("--wc",pcol(i));
+      el.innerHTML=`<i></i><span>${WALK_ICON[dir]}</span>`;   // 足もとの楕円は参加者の色
+      // 線の真上だと見づらいので、足もとを線から少し上に浮かせる
+      const m=new maplibregl.Marker({element:el,anchor:"bottom",offset:[0,-5]}).setLngLat(pts[0]).addTo(MAP);
+      // 帰りは酔っているのでゆっくり。出発をずらして、人ごとに位置がばらけるようにする
+      WALKERS.push({m,pts,cum,dur:dir==="go"?11000:17000,phase:(i*.23+(dir==="go"?0:.5))%1});
+    });
+  });
+  if(!WALK_RAF) WALK_RAF=requestAnimationFrame(stepWalkers);
+}
+function stepWalkers(now){
+  WALK_RAF=WALKERS.length?requestAnimationFrame(stepWalkers):null;
+  const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  WALKERS.forEach(w=>{
+    const L=w.cum[w.cum.length-1], f=still?.5:((now/w.dur+w.phase)%1), x=f*L;
+    let k=1; while(k<w.cum.length-1&&w.cum[k]<x) k++;
+    const a=w.pts[k-1], b=w.pts[k], t=(x-w.cum[k-1])/((w.cum[k]-w.cum[k-1])||1);
+    w.m.setLngLat([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);
+  });
+}
+
 /* 破線の模様をずらしていくと、線の向き（座標の並び＝進む向き）に流れて見える */
 const FLOW=[[0,4,3],[.5,4,2.5],[1,4,2],[1.5,4,1.5],[2,4,1],[2.5,4,.5],[3,4,0],
   [0,.5,3,3.5],[0,1,3,3],[0,1.5,3,2.5],[0,2,3,2],[0,2.5,3,1.5],[0,3,3,1],[0,3.5,3,.5]].map(a=>a.map(v=>v*2));
@@ -429,6 +476,7 @@ function drawDetail(d){
     }));
   });
   MAP.getSource("routes").setData({type:"FeatureCollection",features:feats});
+  placeWalkers(d);
 
   drawPins();
   // 人を選んでいるときはその人の経路に寄せる
@@ -508,6 +556,8 @@ function drawLegend(d){
     <div class="lrow"><span class="lg-office">${ICON.office}</span> 会社の最寄り駅</div>
     ${d?`<hr><h3>${d.station} への行きと帰り</h3>
     ${d.routes.map((r,i)=>`<div class="lrow"><s style="background:${pcol(i)};height:4px"></s> ${r.name}</div>`).join("")}
+    ${SELP!=null?`<div class="lrow"><span style="width:18px;height:18px">${WALK_ICON.go}</span> 行き（スキップ）</div>
+    <div class="lrow"><span style="width:18px;height:18px">${WALK_ICON.back}</span> 帰り（千鳥足）</div>`:""}
     <p class="tag" style="font-size:10px">細い線＝行き（19:00 発）、太い線＝帰り（21:30 発）。点線は徒歩。
     一覧で人を選ぶと、その人の経路が強調されます。</p>`:""}`;
 }
@@ -584,7 +634,8 @@ function credits(){
     <br>静的データの取得日: 鉄道 ${a.odpt||"-"} / OpenStreetMap ${a.osm||"-"}
     （この画面の計算結果は ${META.built||"-"} 時点）。
     <br>飲み屋の位置と線路の形は OpenStreetMap（ODbL）。
-    地図 © OpenFreeMap © OpenMapTiles © OpenStreetMap contributors。`);
+    地図 © OpenFreeMap © OpenMapTiles © OpenStreetMap contributors。
+    <br>地図の目印 Material Design Icons（Apache-2.0）・経路の上の人 <a href="https://openmoji.org/">OpenMoji</a>（CC BY-SA 4.0）。`);
 }
 /* ---------- 1. 予定を入れる ---------- */
 const dlabel=iso=>{const d=new Date(iso+"T00:00");return `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`};
@@ -759,7 +810,7 @@ function showDays(){
   if(CHOSEN) return;
   // 候補を選んでいないときは、全員の自宅・会社と各日の駅を見渡す
   RESULT=null; SEL=null; DETAIL=null;
-  MAP.getSource("routes").setData(empty());
+  MAP.getSource("routes").setData(empty()); clearWalkers();
   paintStations(null);
   drawPins(); drawLegend(null);
   const b=new maplibregl.LngLatBounds();
