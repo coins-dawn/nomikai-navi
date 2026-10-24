@@ -24,6 +24,12 @@ h1{margin:0;font-size:17px;letter-spacing:.01em;display:flex;align-items:center;
 h1 span{color:inherit}
 .logo{display:flex;align-items:center;gap:7px;color:inherit;text-decoration:none}
 .sub{color:var(--muted);font-size:12px}
+.hlink{margin-left:auto;background:none;border:none;padding:0;color:var(--accent);font-size:12px;text-decoration:underline;cursor:pointer;white-space:nowrap}
+#dataDlg{max-width:min(640px,calc(100vw - 32px));border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--fg);padding:0}
+#dataDlg>div{padding:14px 16px}
+#dataDlg::backdrop{background:rgba(0,0,0,.35)}
+#dataDlg h2{margin:0 0 8px;font-size:15px}
+#dataDlg .x{float:right;background:none;border:none;color:var(--muted);font-size:18px;line-height:1;padding:0 2px}
 .app{display:grid;grid-template-columns:310px 1fr;flex:1;min-height:0}
 .app[hidden],#step1[hidden]{display:none}
 /* 2 の画面は最大 3 列: 候補 | 地図 | 各人（候補を選ぶと右に開く。人を選ぶとその人の乗り換えを同じ列の中に広げる） */
@@ -151,10 +157,8 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
 .wk button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
 .dd button{font-size:12px;padding:4px 7px;background:var(--bg);color:var(--fg)}
 .dd button em{font-style:normal;font-weight:700;margin-left:3px}
-.dd button.m-会{background:var(--accent);border-color:var(--accent);color:#fff}
-.dd button.m-家{background:#e7f4ee;border-color:#9fd3bb;color:#0b6b49}
+.dd button.m-ok{background:#e7f4ee;border-color:#9fd3bb;color:#0b6b49}
 .dd button.m-×{background:var(--panel2);color:#a8a29a;text-decoration:line-through}
-.dd button.ov{box-shadow:inset 0 -2px 0 rgba(0,0,0,.35)}
 .mark{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:1px 6px 1px 4px;border-radius:99px;
   border:1px solid var(--line);background:#fff;margin:2px 3px 0 0;white-space:nowrap}
 .mark i{width:8px;height:8px;border-radius:50%;display:inline-block}
@@ -254,7 +258,13 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
       <path d="M22 30h5v18h-5z" fill="#ffe3a8" opacity=".9"/>
     </svg></a></h1>
   <div class="sub">候補日ごとに、<b>会社から来る人</b>・<b>自宅から来る人</b>の行きと帰りを調べて、<b>優先したい条件にいちばん合う駅</b>を探して比べます。</div>
+  <button type="button" class="hlink" id="openData">使っているオープンデータ</button>
 </header>
+<dialog id="dataDlg"><div>
+  <button type="button" class="x" id="closeData" title="閉じる">×</button>
+  <h2>使っているオープンデータ</h2>
+  <div class="tag credits"></div>
+</div></dialog>
 <div class="stepbar">
   <nav class="steps" id="steps">
     <button data-s="1"><b>1</b>予定を入れる</button><i>›</i>
@@ -274,25 +284,19 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
     <div class="row"><input type="date" id="dateIn"><button id="addDate">追加</button></div>
     <div class="chips" id="dates"></div>
     <h2>参加者</h2>
-    <div class="tag" style="margin-bottom:8px">自宅と会社の最寄り駅、出社する曜日を入れてください。候補日ごとの予定は曜日から決まり、
-      ボタンを押すと「会社から → 自宅から → 行けない」と切り替わります（変えた日は下線が付きます）。
-      会社から来る人は「会社→飲み会→自宅」、自宅から来る人（在宅勤務・休み）は「自宅→飲み会→自宅」の移動時間を数えます。
-      会社がある人は、自宅〜会社の最速経路を通勤定期の区間とみなします。</div>
     <div id="people"></div>
     <button class="ghost" id="add">＋ 参加者を追加</button>
     <h2>何を優先して駅を選ぶ？</h2>
     <select id="crit" class="crit">
-      <option value="cost">移動時間の合計がいちばん少ない</option>
-      <option value="stay">終電がいちばん早い人が、いちばん遅くまでいられる</option>
-      <option value="simple">帰りの乗り換えがいちばん少ない（酔って乗り過ごさない）</option>
-      <option value="work">いちばん早く出る人が、いちばん遅くまで仕事できる</option>
-      <option value="fare">全員の交通費（定期の区間の外の運賃）がいちばん安い</option>
+      <option value="cost">移動時間の合計がいちばん小さい</option>
+      <option value="fare">運賃の合計がいちばん小さい</option>
+      <option value="stay">終電がいちばん遅い</option>
+      <option value="simple">帰りの電車で乗り過ごさない</option>
+      <option value="work">ギリギリまで仕事できる</option>
     </select>
     <div class="tag" id="critNote" style="margin-top:4px"></div>
     <button class="primary" id="compare" style="margin-top:10px">日付と駅を比べる</button>
     <div class="tag" id="status" style="margin-top:8px"></div>
-    <h2>使っているオープンデータ</h2>
-    <div class="tag credits"></div>
   </div>
 </section>
 
@@ -302,8 +306,6 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
     <h2>飲み会の候補（日付と駅）</h2>
     <div id="daysBanner"></div>
     <div id="days"></div>
-    <h2 style="margin-top:16px">使っているオープンデータ</h2>
-    <div class="tag credits"></div>
   </div>
   <!-- 地図 -->
   <div id="mapwrap" style="position:relative;overflow:hidden">
@@ -331,13 +333,13 @@ const MAX_TRAVEL=90;   // 片道がこれを超える駅はおすすめに出さ
 const MAPDIM="#ffffff";
 let SELP=null;   // 2 の画面で選んでいる参加者（右端に乗り換えを出し、経路を強調する）
 let META=null,RESULT=null,SEL=null,MAP=null,DETAIL=null,MARKERS=[],HOVER=null,GEO={},FIT=false;
-/* サンプル: 5 人・候補日 6 日。week は月〜金の出社（1＝会社から）。over はその日だけの例外 */
+/* サンプル: 5 人・候補日 6 日。week は月〜金の出社（1＝会社から）。over はその日だけ行けない日（"×"） */
 const SAMPLE={
   dates:["2026-11-09","2026-11-10","2026-11-11","2026-11-12","2026-11-13","2026-11-17"],
   people:[
     {home:"荻窪",office:"大手町",week:[1,1,0,1,0],over:{}},
     {home:"川口",office:"池袋",week:[0,1,1,0,0],over:{}},
-    {home:"西船橋",office:"品川",week:[1,0,1,1,0],over:{"2026-11-17":"会"}},
+    {home:"西船橋",office:"品川",week:[1,0,1,1,0],over:{}},
     {home:"蒲田",office:"渋谷",week:[0,0,0,1,1],over:{"2026-11-13":"×"}},
     {home:"聖蹟桜ヶ丘",office:"新宿",week:[1,1,0,0,0],over:{}},
   ]};
@@ -449,18 +451,25 @@ function placeWalkers(d){
   };
   const at=st=>{const g=st&&geoByName(st);return g?[g.lon,g.lat]:null};
   const go=path(r.go), back=path(r.back), office=p&&p.from==="office"?at(p.office):null, bar=at(d.station);
-  // 駅にいる場面は目印の真上に立たせ、歩く場面は線から少し上に浮かせる。帰りは酔っているのでゆっくり
+  // 駅にいる場面は目印の真上に立たせる。歩く場面は足もとの楕円の中心を自分の線（行きか帰り）の真上に置く。帰りは酔っているのでゆっくり
   const scenes=[
     office&&{k:"work",dur:2600,pos:office,dy:-14},
-    go&&{k:"go",dur:7000,...go,dy:-5},
+    go&&{k:"go",dur:7000,...go,dy:1},
     bar&&{k:"drink",dur:3200,pos:bar,dy:-18},
-    back&&{k:"back",dur:10000,...back,dy:-5},
+    back&&{k:"back",dur:10000,...back,dy:1},
     {k:"rest",dur:900,pos:back?back.pts[back.pts.length-1]:bar,dy:-5},
   ].filter(Boolean);
   const el=document.createElement("div"); el.style.setProperty("--wc",pcol(i));
   const m=new maplibregl.Marker({element:el,anchor:"bottom"}).setLngLat(scenes[0].pos||scenes[0].pts[0]).addTo(MAP);
   WALKERS.push({m,el,scenes,total:scenes.reduce((a,s)=>a+s.dur,0),cur:null,t0:performance.now()});
   if(!WALK_RAF) WALK_RAF=requestAnimationFrame(stepWalkers);
+}
+// 選んだ人の線を左にずらす量（px）。OFF と同じ式：行き W=2.5+2.5、帰り W=4+2.5 → W/2+1.5
+const WALK_OFF={go:4,back:4.75};
+function along(s,x){
+  let k=1; while(k<s.cum.length-1&&s.cum[k]<x) k++;
+  const a=s.pts[k-1], b=s.pts[k], f=(x-s.cum[k-1])/((s.cum[k]-s.cum[k-1])||1);
+  return [a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f];
 }
 function stepWalkers(now){
   WALK_RAF=WALKERS.length?requestAnimationFrame(stepWalkers):null;
@@ -479,9 +488,12 @@ function stepWalkers(now){
     }
     if(s.pos){w.m.setLngLat(s.pos);return}
     const L=s.cum[s.cum.length-1], x=(still?.5:t/s.dur)*L;
-    let k=1; while(k<s.cum.length-1&&s.cum[k]<x) k++;
-    const a=s.pts[k-1], b=s.pts[k], f=(x-s.cum[k-1])/((s.cum[k]-s.cum[k-1])||1);
-    w.m.setLngLat([a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f]);
+    w.m.setLngLat(along(s,x));
+    // 線は進行方向の左にずらして引いている（OFF）ので、人も同じだけ左にずらして自分の線の上を歩かせる。
+    // 行きと帰りが同じ線路を通っても、帰りの人は帰りの線の上にいる。向きは前後を少し広く見てなめらかにする
+    const p0=MAP.project(along(s,Math.max(x-L*.03,0))), p1=MAP.project(along(s,Math.min(x+L*.03,L)));
+    const dx=p1.x-p0.x, dy=p1.y-p0.y, n=Math.hypot(dx,dy)||1, o=WALK_OFF[s.k];
+    w.m.setOffset([dy/n*o,s.dy-dx/n*o]);
   });
 }
 
@@ -702,6 +714,10 @@ function markOf(p,iso){
   return p.office.trim()&&p.week[wday(iso)-1]?"会":"家";
 }
 function stale(){DAYS=null;CHOSEN=null;SELP=null;steps()}
+// 出典・ライセンスはヘッダのリンクから開く（2026-10-24 ユーザー指示）
+$("#openData").onclick=()=>$("#dataDlg").showModal();
+$("#closeData").onclick=()=>$("#dataDlg").close();
+$("#dataDlg").onclick=e=>{if(e.target===e.currentTarget)$("#dataDlg").close()};
 function steps(){
   $$("#steps button").forEach(b=>{
     const k=+b.dataset.s;
@@ -751,7 +767,7 @@ function renderPeople(){
       <div class="pr"><label>出社</label><div class="wk">${[..."月火水木金"].map((w,k)=>
         `<button class="${p.week[k]?"on":""}" data-k="${k}">${w}</button>`).join("")}</div></div>
       <div class="pr"><label>候補日</label><div class="dd">${STATE.dates.map(d=>{const m=markOf(p,d);
-        return `<button class="m-${m}${p.over[d]?" ov":""}" data-d="${d}">${dlabel(d)}<em>${{会:"会社",家:"自宅","×":"×"}[m]}</em></button>`}).join("")
+        return `<button class="${m==="×"?"m-×":"m-ok"}" data-d="${d}">${dlabel(d)}<em>${m==="×"?"×":"〇"}</em></button>`}).join("")
         ||'<span class="tag">候補日を追加すると、日ごとの予定が出ます</span>'}</div></div>
     </div>
     <button class="del" title="消す">×</button></div>`).join("");
@@ -765,11 +781,10 @@ function renderPeople(){
     el.querySelectorAll(".sp input").forEach(stationPicker);
     showPass(el,p);
     el.querySelectorAll(".wk button").forEach(b=>b.onclick=()=>{p.week[+b.dataset.k]^=1;redraw()});
+    // 候補日は 〇（行ける）と ×（行けない）だけを切り替える。会社からか自宅からかは「出社」の曜日で決まる（2026-10-24 ユーザー指示）
     el.querySelectorAll(".dd button").forEach(b=>b.onclick=()=>{
-      const d=b.dataset.d, order=p.office.trim()?["会","家","×"]:["家","×"];
-      const next=order[(order.indexOf(markOf(p,d))+1)%order.length];
-      // 曜日パターンどおりに戻ったら例外を消す
-      delete p.over[d]; if(markOf(p,d)!==next) p.over[d]=next;
+      const d=b.dataset.d;
+      if(markOf(p,d)==="×") delete p.over[d]; else p.over[d]="×";
       redraw();
     });
     el.querySelector(".del").onclick=()=>{STATE.people.splice(+el.dataset.i,1);redraw()};
