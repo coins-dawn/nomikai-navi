@@ -130,6 +130,7 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
 .chip button{border:none;background:none;color:var(--muted);padding:0 5px;font-size:14px;line-height:1}
 .pr{display:grid;grid-template-columns:44px 1fr;gap:6px;align-items:center}
 .pr>label{font-size:11px;color:var(--muted)}
+.pr.pass .pt{margin:2px 0 4px;line-height:1.45}
 .wk,.dd{display:flex;flex-wrap:wrap;gap:4px}
 .wk button{width:34px;padding:4px 0;font-size:12px;color:var(--muted);background:var(--bg)}
 .wk button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
@@ -195,6 +196,8 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
 .tl .ride{font-size:12px;color:var(--muted);margin:2px 0 8px}
 .tl .ride b{color:var(--fg);font-weight:600}
 .tl .ride.walk{font-style:italic}
+.teiki{display:inline-block;font-size:10px;font-weight:700;color:#fff;background:#3f8f5a;border-radius:3px;padding:0 4px;font-style:normal}
+.teiki.part{background:#8aa34a}
 .tl .xfer{font-size:10.5px;color:var(--warn);margin:-4px 0 6px}
 .pin.p-date{flex-direction:column;gap:2px}
 .pin.p-date span{background:var(--accent);color:#fff;text-align:center;line-height:1.35;padding:3px 6px;font-size:12px}
@@ -258,7 +261,8 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
     <h2>参加者</h2>
     <div class="tag" style="margin-bottom:8px">自宅と会社の最寄り駅、出社する曜日を入れてください。候補日ごとの予定は曜日から決まり、
       ボタンを押すと「会社から → 自宅から → 行けない」と切り替わります（変えた日は下線が付きます）。
-      会社から来る人は「会社→飲み会→自宅」、自宅から来る人（在宅勤務・休み）は「自宅→飲み会→自宅」の移動時間を数えます。</div>
+      会社から来る人は「会社→飲み会→自宅」、自宅から来る人（在宅勤務・休み）は「自宅→飲み会→自宅」の移動時間を数えます。
+      会社がある人は、自宅〜会社の最速経路を通勤定期の区間とみなします（違うときは経由駅を入れてください）。</div>
     <div id="people"></div>
     <button class="ghost" id="add">＋ 参加者を追加</button>
     <h2>何を優先して駅を選ぶ？</h2>
@@ -267,6 +271,7 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
       <option value="stay">終電がいちばん早い人が、いちばん遅くまでいられる</option>
       <option value="simple">帰りの乗り換えがいちばん少ない（酔って乗り過ごさない）</option>
       <option value="work">いちばん早く出る人が、いちばん遅くまで仕事できる</option>
+      <option value="fare">全員の交通費（定期の区間の外の運賃）がいちばん安い</option>
     </select>
     <div class="tag" id="critNote" style="margin-top:4px"></div>
     <button class="primary" id="compare" style="margin-top:10px">日付と駅を比べる</button>
@@ -316,11 +321,11 @@ let META=null,RESULT=null,SEL=null,MAP=null,DETAIL=null,MARKERS=[],HOVER=null,GE
 const SAMPLE={
   dates:["2026-11-09","2026-11-10","2026-11-11","2026-11-12","2026-11-13","2026-11-17"],
   people:[
-    {home:"荻窪",office:"大手町",week:[1,1,0,1,0],over:{}},
-    {home:"川口",office:"池袋",week:[0,1,1,0,0],over:{}},
-    {home:"西船橋",office:"品川",week:[1,0,1,1,0],over:{"2026-11-17":"会"}},
-    {home:"蒲田",office:"渋谷",week:[0,0,0,1,1],over:{"2026-11-13":"×"}},
-    {home:"聖蹟桜ヶ丘",office:"新宿",week:[1,1,0,0,0],over:{}},
+    {home:"荻窪",via:"",office:"大手町",week:[1,1,0,1,0],over:{}},
+    {home:"川口",via:"",office:"池袋",week:[0,1,1,0,0],over:{}},
+    {home:"西船橋",via:"",office:"品川",week:[1,0,1,1,0],over:{"2026-11-17":"会"}},
+    {home:"蒲田",via:"",office:"渋谷",week:[0,0,0,1,1],over:{"2026-11-13":"×"}},
+    {home:"聖蹟桜ヶ丘",via:"",office:"新宿",week:[1,1,0,0,0],over:{}},
   ]};
 const WD="日月火水木金土";
 /* 地図の目印のアイコン（Material Design Icons, Apache-2.0。https://pictogrammers.com/ ） */
@@ -620,8 +625,14 @@ function legShape(rw,a,b){
   // 駅間の形は build_rail_shapes.py が路線ごとの線路（OSM の route リレーション）で引いたもの。前の駅→次の駅の向き
   const fwd=k=>segs[k]||[];
   let out=[];
-  if(i<j) for(let k=i;k<j;k++) out=out.concat(fwd(k));
-  else for(let k=i-1;k>=j;k--) out=out.concat(fwd(k).slice().reverse());
+  const n=rail.o.length, back=k=>fwd(k).slice().reverse(), at=x=>{const g=GEO[x];return g?[[g.lat,g.lon]]:[]};
+  if((META.loops||[]).includes(rw)&&Math.abs(i-j)>n/2){
+    // 環状線で両端（品川・大崎）をまたぐほうが近いとき。両端の間は線形が無いので直線でつなぐ
+    if(i<j){for(let k=i-1;k>=0;k--) out=out.concat(back(k)); out=out.concat(at(rail.o[0]),at(rail.o[n-1])); for(let k=n-2;k>=j;k--) out=out.concat(back(k))}
+    else{for(let k=i;k<n-1;k++) out=out.concat(fwd(k)); out=out.concat(at(rail.o[n-1]),at(rail.o[0])); for(let k=0;k<j;k++) out=out.concat(fwd(k))}
+  }
+  else if(i<j) for(let k=i;k<j;k++) out=out.concat(fwd(k));
+  else for(let k=i-1;k>=j;k--) out=out.concat(back(k));
   return out.length>1?out:null;
 }
 
@@ -657,7 +668,7 @@ function credits(){
   const a=META.acquired||{}, c=META.contact||{};
   $$(".credits").forEach(el=>el.innerHTML=`
     このアプリは<b>公共交通オープンデータセンター</b>で提供されるデータを利用しています
-    （鉄道10事業者65路線の列車時刻表・駅情報・ラインカラー）。
+    （鉄道10事業者65路線の列車時刻表・駅情報・ラインカラー・駅間運賃）。
     データの<b>正確性・完全性が保証されたものではありません</b>。実際の運行とは異なる場合があります。
     <b>交通事業者への直接のお問い合わせはご遠慮ください。</b>
     ${c.contact_url?`お問い合わせは <a href="${c.contact_url}">${c.contact_label}</a> へ。`:""}
@@ -665,6 +676,8 @@ function credits(){
     （この画面の計算結果は ${META.built||"-"} 時点）。
     <br>飲み屋の位置と線路の形は OpenStreetMap（ODbL）。
     地図 © OpenFreeMap © OpenMapTiles © OpenStreetMap contributors。
+    <br>交通費は概算です。JR東日本以外は、線路の長さに各社の距離帯の運賃（IC）を当てたもので、段の境目は ODPT の駅間運賃に合わせています。
+    JR東日本は運賃データが無いため、公表の賃率（2026年3月14日改定）から出しています。特定区間運賃・乗継割引（メトロ⇔都営を除く）・定期の経路の特例は入っていません。
     <br>地図の目印 Material Design Icons（Apache-2.0）。`);
 }
 /* ---------- 1. 予定を入れる ---------- */
@@ -721,6 +734,8 @@ function renderPeople(){
     <div class="fields">
       <div class="pr"><label>自宅</label><input type="text" class="st" list="stations" placeholder="自宅の最寄り駅" value="${p.home}"></div>
       <div class="pr"><label>会社</label><input type="text" class="of" list="stations" placeholder="会社の最寄り駅（なければ空のまま）" value="${p.office}"></div>
+      <div class="pr pass"${p.office.trim()?"":" hidden"}><label>定期</label><div><div class="tag pt">…</div>
+        <input type="text" class="via" list="stations" placeholder="経由駅（違うときだけ）" value="${p.via||""}"></div></div>
       <div class="pr"><label>出社</label><div class="wk">${[..."月火水木金"].map((w,k)=>
         `<button class="${p.week[k]?"on":""}" data-k="${k}">${w}</button>`).join("")}</div></div>
       <div class="pr"><label>候補日</label><div class="dd">${STATE.dates.map(d=>{const m=markOf(p,d);
@@ -734,6 +749,10 @@ function renderPeople(){
     el.querySelector(".st").oninput=e=>{p.home=e.target.value;stale()};
     el.querySelector(".of").oninput=e=>{p.office=e.target.value;stale()};
     el.querySelector(".of").onchange=redraw;     // 会社の有無で日ごとの予定が変わる
+    el.querySelector(".st").onchange=()=>showPass(el,p);
+    el.querySelector(".via").oninput=e=>{p.via=e.target.value;stale()};
+    el.querySelector(".via").onchange=()=>showPass(el,p);
+    showPass(el,p);
     el.querySelectorAll(".wk button").forEach(b=>b.onclick=()=>{p.week[+b.dataset.k]^=1;redraw()});
     el.querySelectorAll(".dd button").forEach(b=>b.onclick=()=>{
       const d=b.dataset.d, order=p.office.trim()?["会","家","×"]:["家","×"];
@@ -745,7 +764,16 @@ function renderPeople(){
     el.querySelector(".del").onclick=()=>{STATE.people.splice(+el.dataset.i,1);redraw()};
   });
 }
-$("#add").onclick=()=>{STATE.people.push({home:"",office:"",week:[1,1,1,1,1],over:{}});stale();renderPeople()};
+/* 定期の区間＝自宅〜会社の最速経路（経由駅があればそこを通る）。交通費は、ここを出た分の運賃だけ数える */
+async function showPass(el,p){
+  const t=el.querySelector(".pt"); if(!t) return;
+  const h=p.home.trim(), o=p.office.trim(), v=(p.via||"").trim(), known=new Set(META.geo.map(s=>s.n));
+  if(!h||!o||!known.has(h)||!known.has(o)){t.textContent="自宅と会社の駅を入れると、通勤経路（定期の区間）が出ます";return}
+  if(v&&!known.has(v)){t.textContent=`知らない駅です: ${v}`;return}
+  const r=await API.commute({home:h,office:o,via:v}).catch(()=>null);
+  t.innerHTML=r?`${r.text}<span style="opacity:.8">（約${r.minutes}分${v?"・経由を指定":"・最速経路"}）</span>`:"通勤経路が見つかりません";
+}
+$("#add").onclick=()=>{STATE.people.push({home:"",via:"",office:"",week:[1,1,1,1,1],over:{}});stale();renderPeople()};
 $("#sample").onclick=()=>{STATE=JSON.parse(JSON.stringify(SAMPLE));stale();renderDates();renderPeople();
   $("#status").textContent="";
   $("#compare").scrollIntoView({behavior:"smooth",block:"center"});   // 次に押すボタンまで連れていく
@@ -754,8 +782,9 @@ $("#sample").onclick=()=>{STATE=JSON.parse(JSON.stringify(SAMPLE));stale();rende
 /* その日の参加者（行けない人は外す）。ci は参加者の色を日をまたいで揃えるための番号 */
 function peopleOn(iso){
   return STATE.people.map((p,i)=>({p,i,m:markOf(p,iso)})).filter(x=>x.m!=="×"&&x.p.home.trim())
-    .map(({p,i,m})=>m==="会"?{station:p.home.trim(),from:"office",office:p.office.trim(),ci:i}
-                              :{station:p.home.trim(),from:"home",ci:i});
+    .map(({p,i,m})=>({station:p.home.trim(),from:m==="会"?"office":"home",ci:i,
+      // 会社がある人は定期（自宅〜会社）を持っているものとする。在宅の日も帰りに使える
+      ...(p.office.trim()?{office:p.office.trim(),via:(p.via||"").trim()}:{})}));
 }
 const pcol=i=>COLORS[((RESULT&&RESULT._people[i]&&RESULT._people[i].ci)??i)%COLORS.length];
 
@@ -779,6 +808,10 @@ const CRIT={
     key:(r,n)=>[r.max,r.cost/n], big:r=>`${r.max}分`, unit:"いちばん遠い人の行き", best:"いちばん短い",
     gap:(r,t)=>r.max-t.max, near:5, diff:(r,t)=>`+${r.max-t.max}分`,
     head:r=>`いちばん遠い人でも行きは <b>${r.max}分</b>（開始の ${r.max}分前に出れば間に合う）`, what:"いちばん遠い人の行き"},
+  fare:{note:"会社がある人は、自宅〜会社の通勤経路を定期で乗れるものとし、そこから外れた分の運賃（IC・大人）を行きと帰りで全員ぶん足して、いちばん安い駅を選びます。運賃は線路の長さからの概算です。",
+    key:(r,n)=>[r.fare,r.cost/n], big:r=>`${r.fare.toLocaleString()}円`, unit:"全員の交通費", best:"いちばん安い",
+    gap:(r,t)=>r.fare-t.fare, near:100, diff:(r,t)=>`+${(r.fare-t.fare).toLocaleString()}円`,
+    head:r=>`全員の交通費は <b>${r.fare.toLocaleString()}円</b>（定期の区間の外の運賃・概算）`, what:"交通費"},
 };
 let SORT="cost";
 const critNote=()=>$("#critNote").textContent=CRIT[$("#crit").value].note;
@@ -875,10 +908,12 @@ function render(best){
   $("#banner").innerHTML=`<div class="banner"><b>${dlabel(d.iso)}</b> は <b>${best.name}</b> に集まる（${d.n}人）<br>
     ${SORT==="cost"?"":`${CRIT[SORT].head(best,n)}。<br>`}
     移動の合計 <b>${best.cost}分</b>（1人あたり ${Math.round(best.cost/n)}分）。<br>
+    ${best.fare!=null&&SORT!=="fare"?`全員の交通費 <b>${best.fare.toLocaleString()}円</b>（定期の区間の外の運賃・概算）。<br>`:""}
     <span class="tag">行きは 19:00 に会社または自宅を出て、帰りは ${fmt(j.back_depart)} に飲み会の駅を出たときの所要時間です。
     飲み屋 ${best.bars}軒${best.median_m?`・店まで中央値 ${best.median_m}m`:""}・${best.lines}路線。</span></div>`;
 }
 
+const yen=v=>`${v.toLocaleString()}円`;
 const legText=legs=>legs.length?legs.map(l=>l.line).join("→"):"移動なし（同じ駅）";
 function renderDetail(d,r){
   const j=RESULT;
@@ -893,6 +928,7 @@ function renderDetail(d,r){
     ${d.routes.map((x,i)=>`<div class="who${SELP===i?" on":""}" data-i="${i}" style="--pc:${pcol(i)}">
         <div style="font-size:13px"><span class="chev">▼</span><i class="dot"></i><b>${x.name}</b>
           <span class="tag">${x.from==="office"?`${x.origin}の会社から`:"自宅から"}・計 ${r.times[i]+Math.max(r.back[i],0)}分・終電 ${x.limit_s}</span></div>
+        <div class="tag"><b>交通費</b> ${yen(x.fare_go.yen+x.fare_back.yen)}（行き ${yen(x.fare_go.yen)}・帰り ${yen(x.fare_back.yen)}）${x.pass?"":"・定期なし"}</div>
         <div class="tag"><b>行き</b> ${r.times[i]}分：${legText(x.go)}</div>
         <div class="tag"><b>帰り</b> ${r.back[i]<0?"-":r.back[i]+"分"}（乗り換え ${r.xs&&r.xs[i]<9?r.xs[i]:"-"}回）：${legText(x.back)}</div>
         <div class="acc">${personHTML(i)}</div>
@@ -919,7 +955,7 @@ function personHTML(i){
     legs.forEach((l,k)=>{
       const n=l.stops.length-1, last=l.stops[n];
       h+=l.kind==="walk"?`<div class="ride walk">徒歩で ${last.name} へ</div>`
-        :`<div class="ride"><b>${l.line}</b>（${n}駅）</div>`;
+        :`<div class="ride"><b>${l.line}</b>（${n}駅）${l.pass==="all"?' <span class="teiki">定期</span>':l.pass==="part"?' <span class="teiki part">一部定期</span>':""}</div>`;
       const end=k===legs.length-1;
       h+=`<div class="stn">${timeOf(last)}${end?to:last.name}</div>`;
       if(!end&&l.kind!=="walk"&&legs[k+1].kind!=="walk") h+=`<div class="xfer">乗り換え</div>`;
@@ -929,9 +965,11 @@ function personHTML(i){
   const go=timeline(x.go,`${x.origin}（${x.from==="office"?"会社":"自宅"}）`,`${SEL}（飲み会）`);
   const bk=timeline(x.back,`${SEL}（飲み会）`,`${x.home}（自宅）`);
   const sub=(t,m)=>typeof t==="string"?"移動なし":`${m}分・乗り換え ${Math.max(t.trains-1,0)}回`;
-  return `<div class="trip"><h3>行き <span class="tag">19:00 発・${sub(go,r.times[i])}</span></h3>
+  const fz=f=>f.yen?`・${yen(f.yen)}（${f.parts.filter(p=>p.yen).map(p=>`${p.op} ${yen(p.yen)}`).join("・")}）`:"・運賃 0円";
+  return `${x.pass?`<div class="tag" style="margin-bottom:6px">定期の区間: ${x.pass}</div>`:""}
+    <div class="trip"><h3>行き <span class="tag">19:00 発・${sub(go,r.times[i])}${fz(x.fare_go)}</span></h3>
       ${typeof go==="string"?go:`<div class="tl">${go.h}</div>`}</div>
-    <div class="trip"><h3>帰り <span class="tag">${fmt(RESULT.back_depart)} 発・${r.back[i]<0?"-":sub(bk,r.back[i])}</span></h3>
+    <div class="trip"><h3>帰り <span class="tag">${fmt(RESULT.back_depart)} 発・${r.back[i]<0?"-":sub(bk,r.back[i])}${fz(x.fare_back)}</span></h3>
       ${typeof bk==="string"?bk:`<div class="tl">${bk.h}</div>`}</div>
     <div class="tag">${SEL} から ${x.home} への終電は <b>${x.limit_s}</b> です。</div>`;
 }

@@ -10,6 +10,7 @@
 | 線路の線形 | `scripts/build_rail_shapes.py`。OSM の路線（route リレーション）の線路の上で隣り合う駅を最短経路でつなぐ。路線との対応は名前でなく、駅が線路の近くに並ぶかで決める |
 | サーバ版 | `server.py`（Python 標準ライブラリのみ、ポート 8000）。任意の入力でその場で計算する |
 | 静的版 | `scripts/build_static.py` で `site/` を作る。GitHub Pages 用 |
+| 運賃の概算 | `scripts/build_fares.py` が距離帯の段と駅間の線路の長さを `site/data/fare.json` に書き、画面側（`engine-static.js`）で運賃を出す |
 | 画面 | `frontend/index.html`（共通）＋ MapLibre GL JS。計算は `engine-server.js` / `engine-static.js` で差し替える |
 
 ## 動かす
@@ -26,6 +27,8 @@ python3 server.py                 # http://127.0.0.1:8000/
 python3 scripts/build_static.py       # site/ を作る（CPU 2 コアで約 30 分）
 python3 scripts/build_back.py         # 帰りの所要時間だけ足し直す（build_static.py にも含まれる。約 20 秒）
 python3 scripts/build_paths.py        # 行き・帰りの経路だけ作り直す（build_static.py にも含まれる。約 2 分）
+python3 scripts/fetch_fares.py        # 駅間運賃を data/raw/ に取得（配らない）
+python3 scripts/build_fares.py        # site/data/fare.json（運賃の段・駅間の長さ・通勤経路用の路線網）
 python3 scripts/verify_static.py --compare   # 静的版とサーバ版の答えを突き合わせる
 python3 scripts/shot.py dark          # 画面キャプチャ
 ```
@@ -36,7 +39,8 @@ python3 scripts/shot.py dark          # 画面キャプチャ
 
 | データ | 提供元 | ライセンス |
 |---|---|---|
-| 列車時刻表・駅情報・ラインカラー（鉄道 10 事業者 65 路線） | 公共交通オープンデータセンター | 事業者ごとに異なる（下記） |
+| 列車時刻表・駅情報・ラインカラー・駅間運賃（鉄道 10 事業者 65 路線。運賃は JR東日本を除く 9 事業者） | 公共交通オープンデータセンター | 事業者ごとに異なる（下記） |
+| JR東日本の運賃の賃率 | JR東日本の公表値（2026-03-14 改定） | — |
 | 飲食店の位置、線路の線形 | OpenStreetMap | ODbL |
 | 地図の下地 | OpenFreeMap / OpenMapTiles / OpenStreetMap | — |
 | 地図の目印のアイコン（家・ビル・ジョッキ） | Material Design Icons（Pictogrammers） | Apache-2.0 |
@@ -54,6 +58,8 @@ python3 scripts/shot.py dark          # 画面キャプチャ
 - 取得した時刻表は `data/raw/` に置き、**`.gitignore` で除外している**。
 - 公開する `site/` に入れるのは**探索した結果の数値と経路の駅の並びだけ**で、時刻表そのものは入れない
   （経路は区間ごとに路線・乗る駅・降りる駅だけ。時刻は入れない）。
+- 駅間運賃も `data/raw/` に置いて配らない。`site/` に入れるのは、事業者ごとの「距離 → 運賃」の段（十数段）と、
+  OSM から測った駅間の線路の長さ、駅間の所要時間の中央値（発車時刻は入れない）だけ。
 - 画面には、公共交通オープンデータセンター提供である旨・正確性を保証しない旨・問い合わせ先・
   静的データの取得日を出している（開発者ガイドライン 3.1）。表示内容は `data/site.json`。
 
@@ -65,3 +71,6 @@ python3 scripts/shot.py dark          # 画面キャプチャ
 - 線路の線形は 1,109 駅間のうち 860 で引けている。残りは駅間を直線で結んでいる。
 - 平日ダイヤのみ。集合時刻は 19:00 固定。帰りの所要時間は 21:30 発で計算している。
 - 帰りの所要時間は飲み屋 10 軒以上の駅についてだけ計算している。
+- 運賃は概算。線路の長さに距離帯の運賃を当てるので、段の境目の近くで 1 段ずれることがある。
+  特定区間運賃・乗継割引（メトロ⇔都営を除く）・加算運賃・定期の経路の特例は入れていない。
+  定期の区間は自宅〜会社の最速経路（または経由駅を通る経路）とみなしている。

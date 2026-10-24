@@ -1,0 +1,90 @@
+{
+ "TokyoMetro": {
+  "pairs": 34250,
+  "exact": 0.919,
+  "within_10yen": 0.919,
+  "mean_abs_yen": 3.1,
+  "max_abs_yen": 74,
+  "bands": 5
+ },
+ "Toei.Arakawa": {
+  "pairs": 870,
+  "exact": 1.0,
+  "within_10yen": 1.0,
+  "mean_abs_yen": 0.0,
+  "max_abs_yen": 0,
+  "bands": 1
+ },
+ "Toei": {
+  "pairs": 11114,
+  "exact": 0.907,
+  "within_10yen": 0.907,
+  "mean_abs_yen": 5.3,
+  "max_abs_yen": 157,
+  "bands": 6
+ },
+ "Toei.NipporiToneri": {
+  "pairs": 156,
+  "exact": 1.0,
+  "within_10yen": 1.0,
+  "mean_abs_yen": 0.0,
+  "max_abs_yen": 0,
+  "bands": 4
+ },
+ "MIR": {
+  "pairs": 380,
+  "exact": 0.995,
+  "within_10yen": 0.995,
+  "mean_abs_yen": 0.3,
+  "max_abs_yen": 53,
+  "bands": 21
+ },
+ "TWR": {
+  "pairs": 56,
+  "exact": 1.0,
+  "within_10yen": 1.0,
+  "mean_abs_yen": 0.0,
+  "max_abs_yen": 0,
+  "bands": 4
+ },
+ "TamaMonorail": {
+  "pairs": 342,
+  "exact": 0.965,
+  "within_10yen": 0.965,
+  "mean_abs_yen": 3.6,
+  "max_abs_yen": 112,
+  "bands": 6
+ },
+ "YokohamaMunicipal": {
+  "pairs": 1718,
+  "exact": 0.987,
+  "within_10yen": 0.987,
+  "mean_abs_yen": 0.4,
+  "max_abs_yen": 32,
+  "bands": 11
+ },
+ "Keio": {
+  "pairs": 5686,
+  "exact": 0.989,
+  "within_10yen": 0.989,
+  "mean_abs_yen": 0.3,
+  "max_abs_yen": 43,
+  "bands": 11
+ },
+ "Tobu": {
+  "pairs": 31882,
+  "exact": 0.987,
+  "within_10yen": 0.987,
+  "mean_abs_yen": 0.9,
+  "max_abs_yen": 188,
+  "bands": 19
+ },
+ "Sotetsu": {
+  "pairs": 808,
+  "exact": 0.439,
+  "within_10yen": 0.443,
+  "mean_abs_yen": 29.8,
+  "max_abs_yen": 161,
+  "bands": 25
+ }
+}

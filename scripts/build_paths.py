@@ -3,10 +3,12 @@
 
     python3 scripts/build_paths.py               # build_static.py を流し直さずに足せる
     python3 scripts/build_paths.py --transfers   # 帰りの乗り換え回数だけ足し直す
+    python3 scripts/build_paths.py --backto      # backto だけ作り直す
 
   go/<出発駅>.json    その駅を集合時刻（19:00）に出て、候補駅に着く経路   {候補駅: [[路線, 乗る駅, 降りる駅], ...]}
   back/<候補駅>.json  その候補駅を BACK_DEPART（21:30）に出て、各駅に着く経路 {駅: [...]}
   home/<駅>.json の back_x  候補駅からその駅へ帰るときの乗り換え回数（候補でない駅・帰れない駅は -1）
+  backto/<自宅>.json  back を自宅ごとに並べ替えたもの {候補駅: [...]}。全候補の運賃を出すのに使う（中身は back と同じ）
 
 候補駅は飲み屋 CAND_MIN_BARS 軒以上。区間は乗る駅・降りる駅だけで、時刻は入れない（時刻表は復元できない）。
 """
@@ -39,6 +41,7 @@ def add_paths(net, index):
         (DATA / "back" / f"{c}.json").write_text(json.dumps(out, separators=(",", ":")))
     print(f"行きと帰りの経路  {time.time()-t0:.0f}s", flush=True)
     add_transfers(len(net.node_name), cands)
+    add_backto(len(net.node_name), cands)
 
 
 def transfers(legs):
@@ -60,9 +63,25 @@ def add_transfers(n_node, cands):
     print("帰りの乗り換え回数を home に追加", flush=True)
 
 
+def add_backto(n_node, cands):
+    """back/<候補駅>.json（候補駅 → 全駅）を、自宅ごと（全候補駅 → その自宅）に並べ替えて backto/<自宅>.json に書く。
+    運賃で候補を順位づけるには全候補の帰りの経路が要るが、back を候補の数だけ読むと重いので。"""
+    out = [{} for _ in range(n_node)]
+    for c in cands:
+        for h, legs in json.loads((DATA / "back" / f"{c}.json").read_text()).items():
+            out[int(h)][c] = legs
+    (DATA / "backto").mkdir(parents=True, exist_ok=True)
+    for h in range(n_node):
+        (DATA / "backto" / f"{h}.json").write_text(json.dumps(out[h], separators=(",", ":")))
+    print("帰りの経路を自宅ごとに並べ替えた（backto）", flush=True)
+
+
 if __name__ == "__main__":
     index = json.loads((ROOT / "data" / "index.json").read_text())
+    cands = [n["id"] for n in index if n["bars"] >= CAND_MIN_BARS]
     if "--transfers" in sys.argv:   # 経路は作り直さず、乗り換え回数だけ足す
-        add_transfers(len(index), [n["id"] for n in index if n["bars"] >= CAND_MIN_BARS])
+        add_transfers(len(index), cands)
+    elif "--backto" in sys.argv:
+        add_backto(len(index), cands)
     else:
         add_paths(Network(since=DEPART), index)

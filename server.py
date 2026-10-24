@@ -79,7 +79,8 @@ def detail(payload):
             "bars": bars_near(n["lat"], n["lon"]), "routes": routes, "tight": tight}
 
 
-# 何を優先して駅を選ぶか。どれも同じ順位なら移動時間の合計が少ない駅を先に（engine-static.js の SORT_KEY と同じ）
+# 何を優先して駅を選ぶか。どれも同じ順位なら移動時間の合計が少ない駅を先に（engine-static.js の SORT_KEY と同じ）。
+# 交通費（fare）は静的版（engine-static.js）だけで出す。ここでは移動時間の順にする
 SORT_KEY = {
     "cost":   lambda r: (r["cost"],),                          # 移動時間（行き＋帰り）の合計が少ない
     "stay":   lambda r: (-r["min_limit"], r["cost"]),          # いちばん早い人の終電が遅い
