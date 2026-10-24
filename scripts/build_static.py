@@ -7,7 +7,8 @@
 代わりに「自宅 × 駅」の探索結果（帰宅リミット・所要時間・経路の区間）だけを先に計算して配る。
 
 出力（site/data/）
-  meta.json            駅・路線（駅の並びとラインカラー）・集合時刻の一覧
+  meta.json            駅（よみ・ローマ字つき）・路線（駅の並びとラインカラー）・集合時刻の一覧
+                       python3 scripts/build_static.py --meta で meta.json だけ作り直せる
   home/<駅>.json       その駅に住む人の 帰宅リミット と 所要時間（行き・帰り。全駅ぶん）
   route/<自宅>.json    その自宅への帰りの経路。区間は [路線, 乗る駅, 降りる駅] の 3 つだけで、
                        途中の駅は路線の駅順から画面側で引き直す（容量を 1/4 にするため）
@@ -94,6 +95,35 @@ def main(limit_rows=None):
     add_back(net, index)   # 飲み会駅 → 自宅 の帰りの所要時間を home ファイルに足す
     add_paths(net, index)  # 行き（19:00 発）と帰り（21:30 発）の経路
 
+    write_meta(net, index)
+    shp = ROOT / "data" / "rail_shapes.json"
+    if shp.exists():
+        shutil.copy(shp, DATA / "rail_shapes.json")
+    shutil.copy(ROOT / "frontend" / "index.html", SITE / "index.html")
+    shutil.copy(ROOT / "frontend" / "engine-static.js", SITE / "engine.js")
+    (SITE / ".nojekyll").write_text("")
+    total = sum(f.stat().st_size for f in SITE.rglob("*") if f.is_file())
+    print(f"できあがり: {SITE}  {total/1e6:.1f}MB  {time.time()-t0:.0f}s")
+
+
+def readings(net):
+    """駅（ノード）ごとのよみ。ローマ字（全駅にある）と、ひらがな（メトロ・都営など一部の事業者だけにある）。
+    入力欄で、よみ・ローマ字でも駅を探せるようにするため。"""
+    stations = json.loads((ROOT / "data" / "raw" / "stations.json").read_text())
+    en, kana = {}, {}
+    for s in stations:
+        nid = net.sta2node.get(s["owl:sameAs"])
+        t = s.get("odpt:stationTitle", {})
+        if nid is None:
+            continue
+        if t.get("en"):
+            en.setdefault(nid, t["en"])
+        if t.get("ja-Hrkt"):
+            kana.setdefault(nid, t["ja-Hrkt"])
+    return en, kana
+
+
+def write_meta(net, index):
     # --- 路線（駅の並びとラインカラー）。経路の描画と路線網の表示の両方に使う ---
     rails = []
     for rid in net.railways:
@@ -106,9 +136,11 @@ def main(limit_rows=None):
         rails.append({"t": net.railway_title.get(rid, ""), "c": net.railway_color.get(rid), "o": order})
 
     site_cfg = json.loads((ROOT / "data" / "site.json").read_text())
+    en, kana = readings(net)
     meta = {
         "stations": [{"id": n["id"], "n": n["name"], "lat": n["lat"], "lon": n["lon"],
-                      "b": n["bars"], "m": n["median_m"], "l": n["lines"]} for n in index],
+                      "b": n["bars"], "m": n["median_m"], "l": n["lines"],
+                      "e": en.get(n["id"], ""), **({"k": kana[n["id"]]} if n["id"] in kana else {})} for n in index],
         "presets": PRESETS,
         "rails": rails,
         "built": time.strftime("%Y-%m-%d"),
@@ -117,15 +149,14 @@ def main(limit_rows=None):
     }
     (DATA / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, separators=(",", ":")))
 
-    shp = ROOT / "data" / "rail_shapes.json"
-    if shp.exists():
-        shutil.copy(shp, DATA / "rail_shapes.json")
-    shutil.copy(ROOT / "frontend" / "index.html", SITE / "index.html")
-    shutil.copy(ROOT / "frontend" / "engine-static.js", SITE / "engine.js")
-    (SITE / ".nojekyll").write_text("")
-    total = sum(f.stat().st_size for f in SITE.rglob("*") if f.is_file())
-    print(f"できあがり: {SITE}  {total/1e6:.1f}MB  {time.time()-t0:.0f}s")
-
 
 if __name__ == "__main__":
-    main(int(sys.argv[1]) if len(sys.argv) > 1 else None)
+    if "--meta" in sys.argv:   # meta.json だけ作り直す（built の日付は前のまま）
+        prev = json.loads((DATA / "meta.json").read_text())
+        write_meta(Network(since=24 * 60 + 30), json.loads((ROOT / "data" / "index.json").read_text()))
+        cur = json.loads((DATA / "meta.json").read_text())
+        cur["built"] = prev["built"]
+        (DATA / "meta.json").write_text(json.dumps(cur, ensure_ascii=False, separators=(",", ":")))
+        print("meta.json を作り直した")
+    else:
+        main(int(sys.argv[1]) if len(sys.argv) > 1 else None)

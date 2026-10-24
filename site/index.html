@@ -131,6 +131,21 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
 .pr{display:grid;grid-template-columns:44px 1fr;gap:6px;align-items:center}
 .pr>label{font-size:11px;color:var(--muted)}
 .pr.pass .pt{margin:2px 0 4px;line-height:1.45}
+/* 駅を探して選ぶ入力欄の候補 */
+.sp{position:relative;min-width:0}
+.sp input.bad{border-color:var(--warn)}
+.sp-list{position:absolute;left:0;right:0;top:calc(100% + 2px);z-index:40;background:var(--panel);border:1px solid var(--line);
+  border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.16);max-height:min(340px,55vh);overflow:auto}
+.sp-list .it{display:flex;align-items:baseline;gap:6px;width:100%;text-align:left;border:none;border-bottom:1px solid var(--line);
+  border-radius:0;background:none;padding:8px 10px;font-size:14px;color:var(--fg)}
+.sp-list .it b{white-space:nowrap;flex:0 0 auto}
+.pr[hidden]{display:none}
+.sp-list .it small{color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.sp-list .it.on,.sp-list .it:hover{background:var(--panel2)}
+.sp-list .it.line small{margin-left:auto}
+.sp-list .hd{display:block;width:100%;text-align:left;border:none;background:none;font-size:11px;color:var(--muted);padding:7px 10px;line-height:1.5}
+.sp-list .hd.back{color:var(--accent);font-size:12px;font-weight:700}
+.sp-list .ln{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;flex:0 0 auto;align-self:center}
 .wk,.dd{display:flex;flex-wrap:wrap;gap:4px}
 .wk button{width:34px;padding:4px 0;font-size:12px;color:var(--muted);background:var(--bg)}
 .wk button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
@@ -262,7 +277,7 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
     <div class="tag" style="margin-bottom:8px">自宅と会社の最寄り駅、出社する曜日を入れてください。候補日ごとの予定は曜日から決まり、
       ボタンを押すと「会社から → 自宅から → 行けない」と切り替わります（変えた日は下線が付きます）。
       会社から来る人は「会社→飲み会→自宅」、自宅から来る人（在宅勤務・休み）は「自宅→飲み会→自宅」の移動時間を数えます。
-      会社がある人は、自宅〜会社の最速経路を通勤定期の区間とみなします（違うときは経由駅を入れてください）。</div>
+      会社がある人は、自宅〜会社の最速経路を通勤定期の区間とみなします。</div>
     <div id="people"></div>
     <button class="ghost" id="add">＋ 参加者を追加</button>
     <h2>何を優先して駅を選ぶ？</h2>
@@ -303,7 +318,6 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
   </div>
 </div>
 
-<datalist id="stations"></datalist>
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="engine.js"></script>
 <script>
@@ -321,11 +335,11 @@ let META=null,RESULT=null,SEL=null,MAP=null,DETAIL=null,MARKERS=[],HOVER=null,GE
 const SAMPLE={
   dates:["2026-11-09","2026-11-10","2026-11-11","2026-11-12","2026-11-13","2026-11-17"],
   people:[
-    {home:"荻窪",via:"",office:"大手町",week:[1,1,0,1,0],over:{}},
-    {home:"川口",via:"",office:"池袋",week:[0,1,1,0,0],over:{}},
-    {home:"西船橋",via:"",office:"品川",week:[1,0,1,1,0],over:{"2026-11-17":"会"}},
-    {home:"蒲田",via:"",office:"渋谷",week:[0,0,0,1,1],over:{"2026-11-13":"×"}},
-    {home:"聖蹟桜ヶ丘",via:"",office:"新宿",week:[1,1,0,0,0],over:{}},
+    {home:"荻窪",office:"大手町",week:[1,1,0,1,0],over:{}},
+    {home:"川口",office:"池袋",week:[0,1,1,0,0],over:{}},
+    {home:"西船橋",office:"品川",week:[1,0,1,1,0],over:{"2026-11-17":"会"}},
+    {home:"蒲田",office:"渋谷",week:[0,0,0,1,1],over:{"2026-11-13":"×"}},
+    {home:"聖蹟桜ヶ丘",office:"新宿",week:[1,1,0,0,0],over:{}},
   ]};
 const WD="日月火水木金土";
 /* 地図の目印のアイコン（Material Design Icons, Apache-2.0。https://pictogrammers.com/ ） */
@@ -654,8 +668,7 @@ async function boot(){
   initMap();
   META=await API.meta();
   GEO=Object.fromEntries(META.geo.map(s=>[s.id,s]));
-  const on=new Set(); META.rails.forEach(r=>r.o.forEach(n=>on.add(n)));
-  $("#stations").innerHTML=META.geo.filter(s=>on.has(s.id)).map(s=>`<option value="${s.n}">`).join("");
+  buildStations();
   DEPART=META.presets.includes(19*60)?19*60:META.presets[0];
   credits(); renderDates(); renderPeople(); go(1);
   // 地図は 1 の画面では隠れているので、裏で準備しておき 2 に進むときに待つ
@@ -732,10 +745,9 @@ function renderPeople(){
   $("#people").innerHTML=STATE.people.map((p,i)=>`<div class="person" data-i="${i}">
     <span class="dot" style="background:${COLORS[i%COLORS.length]}"></span>
     <div class="fields">
-      <div class="pr"><label>自宅</label><input type="text" class="st" list="stations" placeholder="自宅の最寄り駅" value="${p.home}"></div>
-      <div class="pr"><label>会社</label><input type="text" class="of" list="stations" placeholder="会社の最寄り駅（なければ空のまま）" value="${p.office}"></div>
-      <div class="pr pass"${p.office.trim()?"":" hidden"}><label>定期</label><div><div class="tag pt">…</div>
-        <input type="text" class="via" list="stations" placeholder="経由駅（違うときだけ）" value="${p.via||""}"></div></div>
+      <div class="pr"><label>自宅</label><div class="sp"><input type="text" class="st" autocomplete="off" placeholder="自宅の最寄り駅" value="${p.home}"></div></div>
+      <div class="pr"><label>会社</label><div class="sp"><input type="text" class="of" autocomplete="off" placeholder="会社の最寄り駅（なければ空のまま）" value="${p.office}"></div></div>
+      <div class="pr pass"${p.office.trim()?"":" hidden"}><label>定期</label><div class="tag pt">…</div></div>
       <div class="pr"><label>出社</label><div class="wk">${[..."月火水木金"].map((w,k)=>
         `<button class="${p.week[k]?"on":""}" data-k="${k}">${w}</button>`).join("")}</div></div>
       <div class="pr"><label>候補日</label><div class="dd">${STATE.dates.map(d=>{const m=markOf(p,d);
@@ -750,8 +762,7 @@ function renderPeople(){
     el.querySelector(".of").oninput=e=>{p.office=e.target.value;stale()};
     el.querySelector(".of").onchange=redraw;     // 会社の有無で日ごとの予定が変わる
     el.querySelector(".st").onchange=()=>showPass(el,p);
-    el.querySelector(".via").oninput=e=>{p.via=e.target.value;stale()};
-    el.querySelector(".via").onchange=()=>showPass(el,p);
+    el.querySelectorAll(".sp input").forEach(stationPicker);
     showPass(el,p);
     el.querySelectorAll(".wk button").forEach(b=>b.onclick=()=>{p.week[+b.dataset.k]^=1;redraw()});
     el.querySelectorAll(".dd button").forEach(b=>b.onclick=()=>{
@@ -764,16 +775,102 @@ function renderPeople(){
     el.querySelector(".del").onclick=()=>{STATE.people.splice(+el.dataset.i,1);redraw()};
   });
 }
-/* 定期の区間＝自宅〜会社の最速経路（経由駅があればそこを通る）。交通費は、ここを出た分の運賃だけ数える */
+/* ---------- 駅を探して選ぶ入力欄 ----------
+   駅名（漢字）・よみ（ひらがな・カタカナ）・ローマ字のどれでも探せる。空のまま開くと路線の一覧から選べる
+   （どの駅が対象に入っているか分かるように。2026-10-24 ユーザー指示） */
+let STN=[], STN_BY={};
+const KANA={あ:"a",い:"i",う:"u",え:"e",お:"o",か:"ka",き:"ki",く:"ku",け:"ke",こ:"ko",が:"ga",ぎ:"gi",ぐ:"gu",げ:"ge",ご:"go",
+  さ:"sa",し:"shi",す:"su",せ:"se",そ:"so",ざ:"za",じ:"ji",ず:"zu",ぜ:"ze",ぞ:"zo",た:"ta",ち:"chi",つ:"tsu",て:"te",と:"to",
+  だ:"da",ぢ:"ji",づ:"zu",で:"de",ど:"do",な:"na",に:"ni",ぬ:"nu",ね:"ne",の:"no",は:"ha",ひ:"hi",ふ:"fu",へ:"he",ほ:"ho",
+  ば:"ba",び:"bi",ぶ:"bu",べ:"be",ぼ:"bo",ぱ:"pa",ぴ:"pi",ぷ:"pu",ぺ:"pe",ぽ:"po",ま:"ma",み:"mi",む:"mu",め:"me",も:"mo",
+  や:"ya",ゆ:"yu",よ:"yo",ら:"ra",り:"ri",る:"ru",れ:"re",ろ:"ro",わ:"wa",を:"o",ん:"n",ぁ:"a",ぃ:"i",ぅ:"u",ぇ:"e",ぉ:"o",ゔ:"vu"};
+const YOON={ゃ:"ya",ゅ:"yu",ょ:"yo"};
+/* かな → ローマ字（ヘボン式）。駅名の英語表記と突き合わせるため */
+function kanaRom(s){
+  s=s.replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60));
+  let out="";
+  for(let i=0;i<s.length;i++){
+    const c=s[i], nx=s[i+1];
+    if(c==="っ"){const r=KANA[nx]||"";out+=r.startsWith("ch")?"t":r[0]||"";continue}
+    if(c==="ー") continue;
+    let r=KANA[c]; if(r==null){out+=c;continue}
+    if(YOON[nx]){r=(r.endsWith("i")?r.slice(0,-1):r)+YOON[nx];if(/^(shi|chi|ji)$/.test(KANA[c]))r=KANA[c].slice(0,-1)+YOON[nx].slice(1);i++}
+    out+=r;
+  }
+  return out;
+}
+/* 表記ゆれをならす（Ō→o、ou・oo→o、b/m/p の前の m→n など） */
+const romNorm=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z]/g,"")
+  .replace(/ou|oo|oh(?![aiueo])/g,"o").replace(/uu/g,"u").replace(/m(?=[bmp])/g,"n").replace(/nn/g,"n");
+function buildStations(){
+  const lines={};
+  META.rails.forEach(r=>r.o.forEach(n=>(lines[n]||=[]).push(r.t)));
+  STN=META.geo.filter(s=>lines[s.id]).map(s=>({n:s.n,k:s.k||"",e:s.e||"",lines:[...new Set(lines[s.id])],
+    r:romNorm(s.e||""),kk:romNorm(kanaRom(s.k||""))}));
+  STN_BY=Object.fromEntries(STN.map(s=>[s.n,s]));
+}
+function findStations(q){
+  q=q.trim(); if(!q) return [];
+  const kanaOnly=/^[ぁ-ゖァ-ーー\s]+$/.test(q), latin=/^[A-Za-z\s\-ōūâ]+$/.test(q);
+  const qr=kanaOnly?romNorm(kanaRom(q)):latin?romNorm(q):"";
+  return STN.map(s=>{
+    let sc=null;
+    if(s.n===q) sc=0; else if(s.n.startsWith(q)) sc=1; else if(s.n.includes(q)) sc=3;
+    if(qr&&sc==null){ if(s.r.startsWith(qr)||s.kk.startsWith(qr)) sc=2; else if(qr.length>=4&&(s.r.includes(qr)||s.kk.includes(qr))) sc=4; }
+    return sc==null?null:[sc,s];
+  }).filter(Boolean).sort((a,b)=>a[0]-b[0]||b[1].lines.length-a[1].lines.length||a[1].n.length-b[1].n.length).slice(0,40).map(x=>x[1]);
+}
+const linesText=s=>s.lines.length>2?`${s.lines.slice(0,2).join("・")}ほか${s.lines.length-2}路線`:s.lines.join("・");
+function stationPicker(inp){
+  const box=document.createElement("div"); box.className="sp-list"; box.hidden=true; inp.after(box);
+  let items=[], cur=-1, line=null;
+  const pick=n=>{inp.value=n;box.hidden=true;inp.classList.remove("bad");
+    inp.dispatchEvent(new Event("input"));inp.dispatchEvent(new Event("change"))};
+  const item=(s,i)=>`<button type="button" class="it${i===cur?" on":""}" data-n="${s.n}"><b>${s.n}</b><small>${s.k?s.k+" · ":""}${linesText(s)}</small></button>`;
+  const draw=()=>{
+    const q=inp.value.trim();
+    if(line!=null){   // 路線を選んだあと: その路線の駅を並び順に
+      const r=META.rails[line]; items=r.o.map(id=>STN.find(s=>s.n===GEO[id].n)).filter(Boolean);
+      box.innerHTML=`<button type="button" class="hd back">← 路線の一覧にもどる</button><div class="hd"><i class="ln" style="background:${r.c||"#999"}"></i>${r.t}（${items.length}駅）</div>`+items.map(item).join("");
+    }else if(!q||STN_BY[q]){   // 空のとき（または駅が決まっているとき）: 路線の一覧
+      items=[];
+      box.innerHTML=`<div class="hd">駅名・よみ・ローマ字で探すか、路線から選んでください。対象は関東の鉄道 10 事業者 ${META.rails.length} 路線の ${STN.length} 駅です（東急・西武・京急・小田急・京成などは入っていません）。</div>`
+        +META.rails.map((r,i)=>`<button type="button" class="it line" data-l="${i}"><i class="ln" style="background:${r.c||"#999"}"></i>${r.t}<small>${r.o.length}駅</small></button>`).join("");
+    }else{
+      items=findStations(q);
+      box.innerHTML=items.length?items.map(item).join(""):`<div class="hd">「${q}」に当たる駅がありません。路線から探すときは入力を空にしてください。</div>`;
+    }
+    box.hidden=false;
+  };
+  inp.addEventListener("focus",()=>{line=null;cur=-1;draw()});
+  inp.addEventListener("input",e=>{if(!e.isTrusted) return;line=null;cur=-1;draw()});
+  inp.addEventListener("blur",()=>{setTimeout(()=>{box.hidden=true;line=null},150);
+    const v=inp.value.trim(); inp.classList.toggle("bad",!!v&&!STN_BY[v])});
+  inp.addEventListener("keydown",e=>{
+    if(box.hidden) return;
+    if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();if(!items.length)return;cur=(cur+(e.key==="ArrowDown"?1:-1)+items.length)%items.length;draw();
+      box.querySelector(".it.on")?.scrollIntoView({block:"nearest"})}
+    else if(e.key==="Enter"&&items.length){e.preventDefault();pick(items[Math.max(cur,0)].n)}
+    else if(e.key==="Escape"){box.hidden=true}
+  });
+  // 押したときに入力欄からフォーカスが外れて一覧が閉じないよう、pointerdown で先に処理する
+  box.addEventListener("pointerdown",e=>{
+    const b=e.target.closest("button"); if(!b) return; e.preventDefault();
+    if(b.classList.contains("back")){line=null;draw();return}
+    if(b.dataset.l!=null){line=+b.dataset.l;draw();box.scrollTop=0;return}
+    if(b.dataset.n) pick(b.dataset.n);
+  });
+}
+
+/* 定期の区間＝自宅〜会社の最速経路。交通費は、ここを出た分の運賃だけ数える */
 async function showPass(el,p){
   const t=el.querySelector(".pt"); if(!t) return;
-  const h=p.home.trim(), o=p.office.trim(), v=(p.via||"").trim(), known=new Set(META.geo.map(s=>s.n));
+  const h=p.home.trim(), o=p.office.trim(), known=new Set(META.geo.map(s=>s.n));
   if(!h||!o||!known.has(h)||!known.has(o)){t.textContent="自宅と会社の駅を入れると、通勤経路（定期の区間）が出ます";return}
-  if(v&&!known.has(v)){t.textContent=`知らない駅です: ${v}`;return}
-  const r=await API.commute({home:h,office:o,via:v}).catch(()=>null);
-  t.innerHTML=r?`${r.text}<span style="opacity:.8">（約${r.minutes}分${v?"・経由を指定":"・最速経路"}）</span>`:"通勤経路が見つかりません";
+  const r=await API.commute({home:h,office:o}).catch(()=>null);
+  t.innerHTML=r?`${r.text}<span style="opacity:.8">（約${r.minutes}分・最速経路）</span>`:"通勤経路が見つかりません";
 }
-$("#add").onclick=()=>{STATE.people.push({home:"",via:"",office:"",week:[1,1,1,1,1],over:{}});stale();renderPeople()};
+$("#add").onclick=()=>{STATE.people.push({home:"",office:"",week:[1,1,1,1,1],over:{}});stale();renderPeople()};
 $("#sample").onclick=()=>{STATE=JSON.parse(JSON.stringify(SAMPLE));stale();renderDates();renderPeople();
   $("#status").textContent="";
   $("#compare").scrollIntoView({behavior:"smooth",block:"center"});   // 次に押すボタンまで連れていく
@@ -784,7 +881,7 @@ function peopleOn(iso){
   return STATE.people.map((p,i)=>({p,i,m:markOf(p,iso)})).filter(x=>x.m!=="×"&&x.p.home.trim())
     .map(({p,i,m})=>({station:p.home.trim(),from:m==="会"?"office":"home",ci:i,
       // 会社がある人は定期（自宅〜会社）を持っているものとする。在宅の日も帰りに使える
-      ...(p.office.trim()?{office:p.office.trim(),via:(p.via||"").trim()}:{})}));
+      ...(p.office.trim()?{office:p.office.trim()}:{})}));
 }
 const pcol=i=>COLORS[((RESULT&&RESULT._people[i]&&RESULT._people[i].ci)??i)%COLORS.length];
 
