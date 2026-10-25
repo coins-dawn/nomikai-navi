@@ -363,16 +363,16 @@ const MAX_TRAVEL=90;   // 片道がこれを超える駅はおすすめに出さ
 const MAPDIM="#ffffff";
 let SELP=null;   // 2 の画面で選んでいる参加者（右端に乗り換えを出し、経路を強調する）
 let META=null,RESULT=null,SEL=null,MAP=null,DETAIL=null,MARKERS=[],HOVER=null,GEO={},FIT=false;
-/* サンプル: 5 人・候補日 10 日（各人とも半分くらいは行けない）。week は月〜金の出社（1＝会社から）。
+/* サンプル: 5 人・候補日 10 日（各人とも 2〜3 日は行けない。全員そろう日が 4 日あり、その中で比べられる）。week は月〜金の出社（1＝会社から）。
    ok は行ける日（11 月の日にち）。ほかの日は over で ×（行けない）にする */
 const SAMPLE=(()=>{
   const days=[4,5,6,9,10,11,12,13,16,17], iso=d=>`2026-11-${String(d).padStart(2,"0")}`;
   const P=[
-    {name:"佐藤",home:"荻窪",office:"大手町",week:[1,1,0,1,0],ok:[4,6,9,11,13,17]},
-    {name:"鈴木",home:"川口",office:"池袋",week:[0,1,1,0,0],ok:[5,6,10,11,16]},
-    {name:"高橋",home:"西船橋",office:"品川",week:[1,0,1,1,0],ok:[4,5,9,11,12]},
-    {name:"田中",home:"蒲田",office:"渋谷",week:[0,0,0,1,1],ok:[5,9,10,11,13,17]},
-    {name:"伊藤",home:"聖蹟桜ヶ丘",office:"新宿",week:[1,1,0,0,0],ok:[4,6,9,11,12,16]},
+    {name:"佐藤",home:"荻窪",office:"大手町",week:[1,1,0,1,0],ok:[5,6,9,11,12,13,16,17]},
+    {name:"鈴木",home:"川口",office:"池袋",week:[0,1,1,0,0],ok:[4,5,6,10,11,13,16]},
+    {name:"高橋",home:"西船橋",office:"品川",week:[1,0,1,1,0],ok:[4,5,9,11,12,13,16,17]},
+    {name:"田中",home:"蒲田",office:"渋谷",week:[0,0,0,1,1],ok:[5,6,9,10,11,13,16,17]},
+    {name:"伊藤",home:"聖蹟桜ヶ丘",office:"新宿",week:[1,1,0,0,0],ok:[4,5,6,10,11,12,13,16]},
   ];
   return {dates:days.map(iso),people:P.map(({ok,...p})=>({...p,over:Object.fromEntries(days.filter(d=>!ok.includes(d)).map(d=>[iso(d),"×"]))}))};
 })();
@@ -606,8 +606,9 @@ function pinList(){
   if(!RESULT) return out;
   RESULT._people.forEach((p,i)=>{
     const c=pcol(i);
-    out.push({kind:"home",st:p.station,color:c,label:`${p.name}（${p.station}）`});
-    if(p.from==="office") out.push({kind:"office",st:p.office,color:c,label:`${p.name}（${p.office}）`});
+    // 日付を選んだあとは人の色と経路の強調で誰のものか分かるので、ラベルは「自宅」「会社」と駅名だけ（2026-10-25 ユーザー指示）
+    out.push({kind:"home",st:p.station,color:c,label:`自宅（${p.station}）`});
+    if(p.from==="office") out.push({kind:"office",st:p.office,color:c,label:`会社（${p.office}）`});
   });
   if(SEL) out.push({kind:"cand",st:SEL,rank:"",label:SEL});   // 飲み会の駅（選んだ候補の 1 つだけ）
   return out;
