@@ -29,6 +29,10 @@ h1 span{color:inherit}
 #dataDlg>div{padding:14px 16px}
 #dataDlg::backdrop{background:rgba(0,0,0,.35)}
 #dataDlg h2{margin:0 0 8px;font-size:15px}
+#dataDlg h3{margin:14px 0 4px;font-size:13px}
+#dataDlg p,#dataDlg li{font-size:12.5px;margin:0 0 4px}
+#dataDlg ol,#dataDlg ul{margin:0;padding-left:20px}
+#dataDlg .credits{font-size:11.5px}
 #dataDlg .x{float:right;background:none;border:none;color:var(--muted);font-size:18px;line-height:1;padding:0 2px}
 .app{display:grid;grid-template-columns:310px 1fr;flex:1;min-height:0}
 .app[hidden],#step1[hidden]{display:none}
@@ -129,7 +133,12 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 @media(max-width:700px){.intro{flex-direction:column;align-items:stretch;text-align:center}}
 .s1wrap{max-width:760px;margin:0 auto}
 .s1wrap h2{margin:18px 0 6px;font-size:13px;color:var(--fg)}
-select.crit{width:100%;font-size:14px;padding:8px 10px}
+.crit{display:flex;flex-direction:column;gap:6px}
+.crit label{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:var(--panel);cursor:pointer}
+.crit label:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.crit input{margin-top:3px;accent-color:var(--accent)}
+.crit b{font-size:14px;display:block}
+.crit .tag{display:block;line-height:1.5;margin-top:2px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:99px;padding:3px 4px 3px 10px;
   font-size:13px;background:var(--panel2)}
@@ -169,7 +178,7 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
 .day:hover,.day.hl{border-color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .day .top{display:flex;align-items:baseline;gap:8px}
 .day .dt{font-size:16px;font-weight:700}
-.day .att{font-size:11px;color:var(--muted)}
+.day .att{font-size:11px;color:var(--muted);white-space:nowrap}
 .day .per{margin-left:auto;text-align:right}
 .day .per b{font-size:18px;color:var(--accent2)}
 .day .per div{font-size:10px;color:var(--muted)}
@@ -177,7 +186,10 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
 .day .st b{color:var(--accent-ink)}
 .day .diff{font-size:11px;color:var(--warn);margin-left:6px}
 .day .diff.best{color:var(--accent2)}
-.day.first{border-color:var(--accent);background:#f1f6fe}
+.day.first{border-color:#e0a800;background:#fffaea;box-shadow:0 0 0 1px #e0a800 inset}
+.day .crown{width:22px;height:22px;align-self:center;color:#e0a800;filter:drop-shadow(0 1px 0 #a87800)}
+.day .crown svg{width:100%;height:100%;fill:currentColor;display:block}
+.order{margin:-2px 0 8px;font-size:12px}
 .day.hl{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
 .who{border:1px solid var(--line);border-left:4px solid var(--pc);border-radius:8px;padding:7px 9px;margin-bottom:7px;cursor:pointer}
 .who:hover{background:var(--panel2)}
@@ -186,6 +198,11 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
 .who.on .chev{transform:rotate(180deg);color:var(--pc)}
 .who .acc{display:none;cursor:default;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
 .who.on .acc{display:block}
+.who .wh{font-size:13px}
+.who .wt{float:right;margin-right:8px;font-weight:700;font-size:13px}
+#detail h2{margin:0 0 2px}
+#detail .sum{font-size:13px;margin-bottom:4px}
+#detail .sum b{color:var(--accent-ink)}
 .who .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--pc);margin-right:5px}
 /* 選んだ人のキャラクター（会社で仕事中 → 行き＝スキップ → 乾杯 → 帰り＝千鳥足）。線の少し上に浮かせる */
 .walker{pointer-events:none;width:38px;height:38px}
@@ -258,11 +275,29 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
       <path d="M22 30h5v18h-5z" fill="#ffe3a8" opacity=".9"/>
     </svg></a></h1>
   <div class="sub">候補日ごとに、<b>会社から来る人</b>・<b>自宅から来る人</b>の行きと帰りを調べて、<b>優先したい条件にいちばん合う駅</b>を探して比べます。</div>
-  <button type="button" class="hlink" id="openData">使っているオープンデータ</button>
+  <button type="button" class="hlink" id="openData">このWebサイトについて</button>
 </header>
 <dialog id="dataDlg"><div>
   <button type="button" class="x" id="closeData" title="閉じる">×</button>
-  <h2>使っているオープンデータ</h2>
+  <h2>このWebサイトについて</h2>
+  <h3>できること</h3>
+  <p>平日の飲み会について、候補日ごとに「どの駅に集まるのがいちばん良いか」を探して、日付と駅をあわせて比べます。
+    会社から来る日と自宅から来る日（在宅勤務・休み）を分けて、行き（会社か自宅 → 飲み会の駅）と帰り（飲み会の駅 → 自宅）の両方を数えます。</p>
+  <h3>使い方</h3>
+  <ol>
+    <li>候補日を追加し、参加者ごとに名前・自宅と会社の最寄り駅・出社する曜日を入れます。</li>
+    <li>候補日ごとに、行ける日は〇、行けない日は×にします。会社から来るか自宅から来るかは、出社する曜日で決まります。</li>
+    <li>優先する条件（移動時間か運賃）を選んで「日付と駅を比べる」を押すと、候補日が良い順に並びます。</li>
+    <li>日付を押すと、地図に全員の行きと帰りの経路が出ます。人を押すと、その人の乗り換えと運賃が出ます。</li>
+  </ol>
+  <h3>計算の前提</h3>
+  <ul>
+    <li>行きは 19:00 に会社か自宅の最寄り駅を出て、帰りは 21:30 に飲み会の駅を出るものとして、平日ダイヤで所要時間を出しています。</li>
+    <li>飲み会の駅は、駅の近く（500m 以内）に飲み屋が 30 軒以上ある駅から選びます。片道 90 分を超える人がいる駅は選びません。</li>
+    <li>会社がある人は、自宅〜会社の最速経路を通勤定期の区間とみなし、そこから外れた分の運賃（IC・大人）を数えます。運賃は概算です。</li>
+    <li>対象は関東の鉄道 10 事業者 65 路線です。東急・西武・京急・小田急・京成などとバスは入っていません。</li>
+  </ul>
+  <h3>使っているオープンデータ</h3>
   <div class="tag credits"></div>
 </div></dialog>
 <div class="stepbar">
@@ -287,14 +322,10 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
     <div id="people"></div>
     <button class="ghost" id="add">＋ 参加者を追加</button>
     <h2>何を優先して駅を選ぶ？</h2>
-    <select id="crit" class="crit">
-      <option value="cost">移動時間の合計がいちばん小さい</option>
-      <option value="fare">運賃の合計がいちばん小さい</option>
-      <option value="stay">終電がいちばん遅い</option>
-      <option value="simple">帰りの電車で乗り過ごさない</option>
-      <option value="work">ギリギリまで仕事できる</option>
-    </select>
-    <div class="tag" id="critNote" style="margin-top:4px"></div>
+    <div class="crit" id="crit">
+      <label><input type="radio" name="crit" value="cost" checked><span><b>移動時間の合計の最小</b><span class="tag" data-note="cost"></span></span></label>
+      <label><input type="radio" name="crit" value="fare"><span><b>運賃の最小</b><span class="tag" data-note="fare"></span></span></label>
+    </div>
     <button class="primary" id="compare" style="margin-top:10px">日付と駅を比べる</button>
     <div class="tag" id="status" style="margin-top:8px"></div>
   </div>
@@ -304,7 +335,7 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
   <!-- 左: 飲み会の候補（候補日ごとの最適な駅） -->
   <div class="pane" id="left">
     <h2>飲み会の候補（日付と駅）</h2>
-    <div id="daysBanner"></div>
+    <div class="tag order" id="daysOrder"></div>
     <div id="days"></div>
   </div>
   <!-- 地図 -->
@@ -315,7 +346,6 @@ select.crit{width:100%;font-size:14px;padding:8px 10px}
   <!-- 右: 選んだ候補での各人の移動（人を選ぶと乗り換えをアコーディオンで広げる） -->
   <div class="pane" id="ppl">
     <button class="x" id="closeP" title="閉じる">×</button>
-    <div id="banner"></div>
     <div id="detail"></div>
   </div>
 </div>
@@ -333,20 +363,24 @@ const MAX_TRAVEL=90;   // 片道がこれを超える駅はおすすめに出さ
 const MAPDIM="#ffffff";
 let SELP=null;   // 2 の画面で選んでいる参加者（右端に乗り換えを出し、経路を強調する）
 let META=null,RESULT=null,SEL=null,MAP=null,DETAIL=null,MARKERS=[],HOVER=null,GEO={},FIT=false;
-/* サンプル: 5 人・候補日 6 日。week は月〜金の出社（1＝会社から）。over はその日だけ行けない日（"×"） */
-const SAMPLE={
-  dates:["2026-11-09","2026-11-10","2026-11-11","2026-11-12","2026-11-13","2026-11-17"],
-  people:[
-    {home:"荻窪",office:"大手町",week:[1,1,0,1,0],over:{}},
-    {home:"川口",office:"池袋",week:[0,1,1,0,0],over:{}},
-    {home:"西船橋",office:"品川",week:[1,0,1,1,0],over:{}},
-    {home:"蒲田",office:"渋谷",week:[0,0,0,1,1],over:{"2026-11-13":"×"}},
-    {home:"聖蹟桜ヶ丘",office:"新宿",week:[1,1,0,0,0],over:{}},
-  ]};
+/* サンプル: 5 人・候補日 10 日（各人とも半分くらいは行けない）。week は月〜金の出社（1＝会社から）。
+   ok は行ける日（11 月の日にち）。ほかの日は over で ×（行けない）にする */
+const SAMPLE=(()=>{
+  const days=[4,5,6,9,10,11,12,13,16,17], iso=d=>`2026-11-${String(d).padStart(2,"0")}`;
+  const P=[
+    {name:"佐藤",home:"荻窪",office:"大手町",week:[1,1,0,1,0],ok:[4,6,9,11,13,17]},
+    {name:"鈴木",home:"川口",office:"池袋",week:[0,1,1,0,0],ok:[5,6,10,11,16]},
+    {name:"高橋",home:"西船橋",office:"品川",week:[1,0,1,1,0],ok:[4,5,9,11,12]},
+    {name:"田中",home:"蒲田",office:"渋谷",week:[0,0,0,1,1],ok:[5,9,10,11,13,17]},
+    {name:"伊藤",home:"聖蹟桜ヶ丘",office:"新宿",week:[1,1,0,0,0],ok:[4,6,9,11,12,16]},
+  ];
+  return {dates:days.map(iso),people:P.map(({ok,...p})=>({...p,over:Object.fromEntries(days.filter(d=>!ok.includes(d)).map(d=>[iso(d),"×"]))}))};
+})();
 const WD="日月火水木金土";
 /* 地図の目印のアイコン（Material Design Icons, Apache-2.0。https://pictogrammers.com/ ） */
 const svgOf=d=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
 const ICON={
+  crown:svgOf("M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14z"),     // mdi:crown（いちばん良い日）
   home:svgOf("m12 3l8 6v12h-5v-7H9v7H4V9z"),                                                           // mdi:home-variant
   office:svgOf("M5 3v18h6v-3.5h2V21h6V3zm2 2h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm8 0h2v2h-2z"),   // mdi:office-building
   cand:svgOf("M9.5 3C7.56 3 5.85 4.24 5.23 6.08A3.996 3.996 0 0 0 6 14v8h11v-2h3c.55 0 1-.45 1-1v-8c0-.55-.45-1-1-1h-2V8c0-2.21-1.79-4-4-4h-1.68c-.82-.65-1.79-1-2.82-1m0 2c.79 0 1.53.37 2 1H14a2 2 0 0 1 2 2h-4c-2 0-2.68 1.13-3.5 2.63S6 12 6 12c-1.11 0-2-.89-2-2a2 2 0 0 1 2-2h1v-.5A2.5 2.5 0 0 1 9.5 5m7.5 7h2v6h-2Z"),   // mdi:glass-mug-variant
@@ -558,8 +592,8 @@ function pinList(){
     // 全員の自宅と（いれば）会社、各日の最適な駅に日付のラベル
     STATE.people.forEach((p,i)=>{
       const c=COLORS[i%COLORS.length];
-      if(p.home.trim()) out.push({kind:"home",st:p.home.trim(),color:c,label:`${p.home.trim()}（自宅）`});
-      if(p.office.trim()) out.push({kind:"office",st:p.office.trim(),color:c,label:`${p.office.trim()}（会社）`});
+      if(p.home.trim()) out.push({kind:"home",st:p.home.trim(),color:c,label:`${nameOf(p,i)}（${p.home.trim()}）`});
+      if(p.office.trim()) out.push({kind:"office",st:p.office.trim(),color:c,label:`${nameOf(p,i)}（${p.office.trim()}）`});
     });
     const by={};
     DAYS.forEach(d=>{if(d.best)(by[d.best.name]||=[]).push(d)});
@@ -572,8 +606,8 @@ function pinList(){
   if(!RESULT) return out;
   RESULT._people.forEach((p,i)=>{
     const c=pcol(i);
-    out.push({kind:"home",st:p.station,color:c,label:`${p.station}（自宅）`});
-    if(p.from==="office") out.push({kind:"office",st:p.office,color:c,label:`${p.office}（会社）`});
+    out.push({kind:"home",st:p.station,color:c,label:`${p.name}（${p.station}）`});
+    if(p.from==="office") out.push({kind:"office",st:p.office,color:c,label:`${p.name}（${p.office}）`});
   });
   if(SEL) out.push({kind:"cand",st:SEL,rank:"",label:SEL});   // 飲み会の駅（選んだ候補の 1 つだけ）
   return out;
@@ -714,7 +748,7 @@ function markOf(p,iso){
   return p.office.trim()&&p.week[wday(iso)-1]?"会":"家";
 }
 function stale(){DAYS=null;CHOSEN=null;SELP=null;steps()}
-// 出典・ライセンスはヘッダのリンクから開く（2026-10-24 ユーザー指示）
+// サイトの説明と出典・ライセンスはヘッダのリンクから開く（2026-10-24・25 ユーザー指示）
 $("#openData").onclick=()=>$("#dataDlg").showModal();
 $("#closeData").onclick=()=>$("#dataDlg").close();
 $("#dataDlg").onclick=e=>{if(e.target===e.currentTarget)$("#dataDlg").close()};
@@ -761,6 +795,7 @@ function renderPeople(){
   $("#people").innerHTML=STATE.people.map((p,i)=>`<div class="person" data-i="${i}">
     <span class="dot" style="background:${COLORS[i%COLORS.length]}"></span>
     <div class="fields">
+      <div class="pr"><label>名前</label><input type="text" class="nm" autocomplete="off" placeholder="名前" value="${esc(p.name||"")}"></div>
       <div class="pr"><label>自宅</label><div class="sp"><input type="text" class="st" autocomplete="off" placeholder="自宅の最寄り駅" value="${p.home}"></div></div>
       <div class="pr"><label>会社</label><div class="sp"><input type="text" class="of" autocomplete="off" placeholder="会社の最寄り駅（なければ空のまま）" value="${p.office}"></div></div>
       <div class="pr pass"${p.office.trim()?"":" hidden"}><label>定期</label><div class="tag pt">…</div></div>
@@ -774,6 +809,7 @@ function renderPeople(){
   $$("#people .person").forEach(el=>{
     const p=STATE.people[+el.dataset.i];
     const redraw=()=>{stale();renderPeople()};
+    el.querySelector(".nm").oninput=e=>{p.name=e.target.value;stale()};
     el.querySelector(".st").oninput=e=>{p.home=e.target.value;stale()};
     el.querySelector(".of").oninput=e=>{p.office=e.target.value;stale()};
     el.querySelector(".of").onchange=redraw;     // 会社の有無で日ごとの予定が変わる
@@ -885,7 +921,10 @@ async function showPass(el,p){
   const r=await API.commute({home:h,office:o}).catch(()=>null);
   t.innerHTML=r?`${r.text}<span style="opacity:.8">（約${r.minutes}分・最速経路）</span>`:"通勤経路が見つかりません";
 }
-$("#add").onclick=()=>{STATE.people.push({home:"",office:"",week:[1,1,1,1,1],over:{}});stale();renderPeople()};
+$("#add").onclick=()=>{STATE.people.push({name:"",home:"",office:"",week:[1,1,1,1,1],over:{}});stale();renderPeople()};
+const esc=v=>String(v).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// 結果はすべて名前で出す（空なら「参加者1」のように番号で呼ぶ）
+const nameOf=(p,i)=>esc((p.name||"").trim()||`参加者${i+1}`);
 $("#sample").onclick=()=>{STATE=JSON.parse(JSON.stringify(SAMPLE));stale();renderDates();renderPeople();
   $("#status").textContent="";
   $("#compare").scrollIntoView({behavior:"smooth",block:"center"});   // 次に押すボタンまで連れていく
@@ -894,7 +933,7 @@ $("#sample").onclick=()=>{STATE=JSON.parse(JSON.stringify(SAMPLE));stale();rende
 /* その日の参加者（行けない人は外す）。ci は参加者の色を日をまたいで揃えるための番号 */
 function peopleOn(iso){
   return STATE.people.map((p,i)=>({p,i,m:markOf(p,iso)})).filter(x=>x.m!=="×"&&x.p.home.trim())
-    .map(({p,i,m})=>({station:p.home.trim(),from:m==="会"?"office":"home",ci:i,
+    .map(({p,i,m})=>({name:nameOf(p,i),station:p.home.trim(),from:m==="会"?"office":"home",ci:i,
       // 会社がある人は定期（自宅〜会社）を持っているものとする。在宅の日も帰りに使える
       ...(p.office.trim()?{office:p.office.trim()}:{})}));
 }
@@ -905,30 +944,19 @@ const pcol=i=>COLORS[((RESULT&&RESULT._people[i]&&RESULT._people[i].ci)??i)%COLO
    駅の順位づけそのものは engine.js / server.py の SORT_KEY と同じ */
 const CRIT={
   cost:{note:"行き（会社か自宅 → 飲み会の駅）と帰り（飲み会の駅 → 自宅）の時間を全員ぶん足して、いちばん少ない駅を選びます。",
-    key:(r,n)=>[r.cost/n], big:(r,n)=>`${Math.round(r.cost/n)}分`, unit:"1人あたり", best:"いちばん少ない",
-    gap:(r,t,n)=>r.cost/n-t.cost/n, near:5, diff:(r,t,n)=>`+${Math.round(r.cost/n-t.cost/n)}分/人`,
-    head:(r,n)=>`1人あたり <b>${Math.round(r.cost/n)}分</b>（行き＋帰り）`, what:"移動"},
-  stay:{note:"参加者それぞれの終電（飲み会の駅を出る最終の時刻）のうち、いちばん早いものが、いちばん遅くなる駅を選びます。",
-    key:(r,n)=>[-r.min_limit,r.cost/n], big:r=>fmt(r.min_limit), unit:"いちばん早い終電", best:"いちばん遅い",
-    gap:(r,t)=>t.min_limit-r.min_limit, near:10, diff:(r,t)=>`終電 ${t.min_limit-r.min_limit}分早い`,
-    head:r=>`いちばん早い人の終電でも <b>${fmt(r.min_limit)}</b>`, what:"終電"},
-  simple:{note:"21:30 に飲み会の駅を出て帰るときの乗り換えが、いちばん多い人でも少なくなる駅を選びます（同じなら全員の合計回数が少ない駅）。",
-    key:(r,n)=>[r.max_x,r.sum_x,r.cost/n], big:r=>`${r.max_x}回`, unit:"帰りの乗り換え（最多の人）", best:"いちばん少ない",
-    gap:(r,t)=>r.max_x-t.max_x, near:1, diff:(r,t)=>r.max_x>t.max_x?`乗り換え +${r.max_x-t.max_x}回`:`全員で +${r.sum_x-t.sum_x}回`,
-    head:r=>`帰りの乗り換えは多い人でも <b>${r.max_x}回</b>（全員で ${r.sum_x}回）`, what:"帰りの乗り換え"},
-  work:{note:"飲み会の開始に間に合うよう、いちばん早く出なければならない人（行きがいちばん長い人）の行きの時間が、いちばん短くなる駅を選びます。",
-    key:(r,n)=>[r.max,r.cost/n], big:r=>`${r.max}分`, unit:"いちばん遠い人の行き", best:"いちばん短い",
-    gap:(r,t)=>r.max-t.max, near:5, diff:(r,t)=>`+${r.max-t.max}分`,
-    head:r=>`いちばん遠い人でも行きは <b>${r.max}分</b>（開始の ${r.max}分前に出れば間に合う）`, what:"いちばん遠い人の行き"},
+    order:"平均所要時間が短い順に表示しています",
+    key:(r,n)=>[r.cost/n], big:(r,n)=>`${Math.round(r.cost/n)}分`, unit:"平均所要時間（行き＋帰り）", best:"いちばん短い",
+    gap:(r,t,n)=>r.cost/n-t.cost/n, diff:(r,t,n)=>`+${Math.round(r.cost/n-t.cost/n)}分/人`, what:"移動"},
   fare:{note:"会社がある人は、自宅〜会社の通勤経路を定期で乗れるものとし、そこから外れた分の運賃（IC・大人）を行きと帰りで全員ぶん足して、いちばん安い駅を選びます。運賃は線路の長さからの概算です。",
-    key:(r,n)=>[r.fare,r.cost/n], big:r=>`${r.fare.toLocaleString()}円`, unit:"全員の交通費", best:"いちばん安い",
-    gap:(r,t)=>r.fare-t.fare, near:100, diff:(r,t)=>`+${(r.fare-t.fare).toLocaleString()}円`,
-    head:r=>`全員の交通費は <b>${r.fare.toLocaleString()}円</b>（定期の区間の外の運賃・概算）`, what:"交通費"},
+    order:"通勤定期券を考慮した平均運賃が小さい順に表示しています",
+    key:(r,n)=>[r.fare/n,r.cost/n], big:(r,n)=>yen(Math.round(r.fare/n)), unit:"平均運賃（定期の区間の外）", best:"いちばん安い",
+    gap:(r,t,n)=>r.fare/n-t.fare/n, diff:(r,t,n)=>`+${yen(Math.round(r.fare/n-t.fare/n))}/人`, what:"運賃"},
 };
 let SORT="cost";
-const critNote=()=>$("#critNote").textContent=CRIT[$("#crit").value].note;
-$("#crit").onchange=()=>{critNote();stale()};
-critNote();
+const critOf=()=>$("#crit input:checked").value;
+$$("#crit [data-note]").forEach(el=>el.textContent=CRIT[el.dataset.note].note);   // 各条件の説明はいつも出しておく
+$$("#crit input").forEach(el=>el.onchange=stale);
+const yen=v=>`${v.toLocaleString()}円`;
 const keyCmp=(a,b)=>{for(let i=0;i<a.length;i++) if(a[i]!==b[i]) return a[i]-b[i]; return 0};
 
 /* ---------- 2. 日付と駅を決める ---------- */
@@ -941,7 +969,7 @@ $("#compare").onclick=async()=>{
   const bad=ppl.flatMap(p=>[p.home,p.office]).map(x=>x.trim()).filter(x=>x&&!known.has(x));
   if(bad.length){st.textContent=`知らない駅です: ${[...new Set(bad)].join("・")}（候補から選んでください）`;return}
   st.textContent="計算中…";
-  SORT=$("#crit").value;
+  SORT=critOf();
   const out=[];
   for(const iso of STATE.dates){
     const people=peopleOn(iso);
@@ -963,21 +991,15 @@ $("#compare").onclick=async()=>{
 
 function showDays(){
   const top=DAYS[0], N=STATE.people.filter(p=>p.home.trim()).length, C=CRIT[SORT];
-  const full=DAYS.filter(d=>d.n===top.n&&d.best);
-  const last=full[full.length-1], spread=full.length>1?C.gap(last.best,top.best,top.n):0;
-  $("#daysBanner").innerHTML=top.best?`<div class="banner">いちばん良いのは <b>${dlabel(top.iso)}</b>：
-    <b>${top.best.name}</b> に集まって、${C.head(top.best,top.n)}（${top.n}人）。<br>
-    ${full.length<2?"":spread<C.near?`${top.n}人が来られる日どうしで、${C.what}の差はほとんどありません。<b>どの日でもほぼ同じ</b>なので、日付はほかの都合で決めて大丈夫です。`
-      :`${top.n}人が来られる日の中では、いちばん良くない日と ${C.diff(last.best,top.best,top.n)} の差があります。`}</div>`
-    :`<div class="empty">どの日も条件に合う駅がありません。</div>`;
+  $("#daysOrder").textContent=`${C.order}（来られる人が多い日が先）。`;
   $("#days").innerHTML=DAYS.map((d,k)=>`<div class="day ${k===0&&d.best?"first":""}${d===CHOSEN?" hl":""}" data-k="${k}">
-    <div class="top"><span class="dt">${dlabel(d.iso)}</span><span class="att">${d.n}/${N}人</span>
+    <div class="top">${k===0&&d.best?`<span class="crown" title="いちばん良い日">${ICON.crown}</span>`:""}<span class="dt">${dlabel(d.iso)}</span><span class="att">${d.n}/${N}人</span>
       <span class="per">${d.best?`<b>${C.big(d.best,d.n)}</b><div>${C.unit}</div>`:""}</span></div>
-    <div class="st">${d.best?`<b>${d.best.name}</b>（移動の合計 ${d.best.cost}分）${k===0?`<span class="diff best">${C.best}</span>`
+    <div class="st">${d.best?`<b>${d.best.name}</b>${k===0?`<span class="diff best">${C.best}</span>`
       :d.n===top.n?`<span class="diff">${C.gap(d.best,top.best,top.n)>0?C.diff(d.best,top.best,top.n):`${C.what}は同じ・移動 +${Math.round(d.per-top.per)}分/人`}</span>`:'<span class="diff">来られない人がいる</span>'}`
       :'<span class="tag">条件に合う駅がありません</span>'}</div>
-    <div>${STATE.people.map((p,i)=>p.home.trim()?`<span class="mark m-${markOf(p,d.iso)}"><i style="background:${COLORS[i%COLORS.length]}"></i>${p.home}
-      ${{会:"会社",家:"自宅","×":"×"}[markOf(p,d.iso)]}</span>`:"").join("")}</div></div>`).join("");
+    <div>${STATE.people.map((p,i)=>p.home.trim()?`<span class="mark m-${markOf(p,d.iso)}"><i style="background:${COLORS[i%COLORS.length]}"></i>${nameOf(p,i)}
+      ${{会:"会社から",家:"自宅から","×":"×"}[markOf(p,d.iso)]}</span>`:"").join("")}</div></div>`).join("");
   $$(".day").forEach(el=>{
     const d=DAYS[+el.dataset.k];
     if(d.best) el.onclick=()=>d===CHOSEN?closeDay():openDay(d);   // 選んだ候補をもう一度押すと閉じる
@@ -1001,7 +1023,7 @@ async function openDay(d,auto){
   const tok=++OPENING;
   CHOSEN=d; SELP=null; layout();
   $$(".day").forEach(el=>el.classList.toggle("hl",DAYS[+el.dataset.k]===d));
-  $("#banner").innerHTML=""; $("#detail").innerHTML=`<div class="tag" style="padding:8px">${d.best.name} の経路を組み立て中…</div>`;
+  $("#detail").innerHTML=`<div class="tag" style="padding:8px">${d.best.name} の経路を組み立て中…</div>`;
   // 経路の表示は直前に検索した参加者で組むので、この日の参加者で検索し直す（読み込み済みなので速い）
   const j=await API.search({people:d.people,depart:DEPART,min_bars:BARS_OK,max_travel:MAX_TRAVEL,sort:SORT});
   if(tok!==OPENING) return;
@@ -1011,38 +1033,20 @@ async function openDay(d,auto){
   if(tok!==OPENING) return;
   if(det.error){$("#detail").innerHTML=`<div class="empty">${det.error}</div>`;return}
   paintStations(j); FIT=true;
-  render(r); drawDetail(det); renderDetail(det,r);
+  drawDetail(det); renderDetail(det,r);
   if(!auto&&window.innerWidth<=1100) $("#ppl").scrollIntoView({behavior:"smooth"});
 }
 
-function render(best){
-  const j=RESULT,n=j.people.length,d=CHOSEN;
-  $("#banner").innerHTML=`<div class="banner"><b>${dlabel(d.iso)}</b> は <b>${best.name}</b> に集まる（${d.n}人）<br>
-    ${SORT==="cost"?"":`${CRIT[SORT].head(best,n)}。<br>`}
-    移動の合計 <b>${best.cost}分</b>（1人あたり ${Math.round(best.cost/n)}分）。<br>
-    ${best.fare!=null&&SORT!=="fare"?`全員の交通費 <b>${best.fare.toLocaleString()}円</b>（定期の区間の外の運賃・概算）。<br>`:""}
-    <span class="tag">行きは 19:00 に会社または自宅を出て、帰りは ${fmt(j.back_depart)} に飲み会の駅を出たときの所要時間です。
-    飲み屋 ${best.bars}軒${best.median_m?`・店まで中央値 ${best.median_m}m`:""}・${best.lines}路線。</span></div>`;
-}
-
-const yen=v=>`${v.toLocaleString()}円`;
-const legText=legs=>legs.length?legs.map(l=>l.line).join("→"):"移動なし（同じ駅）";
 function renderDetail(d,r){
   const j=RESULT;
-  $("#detail").innerHTML=`<h2>各人の移動</h2>
-    <table><thead><tr><th>参加者</th><th>行き</th><th>帰り</th><th>計</th></tr></thead><tbody>
-    ${j.people.map((p,k)=>`<tr><td>${p.name}</td>
-      <td>${p.where.replace("駅","")} ${r.times[k]}分</td><td>${r.back[k]<0?"-":r.back[k]+"分"}</td>
-      <td>${r.back[k]<0?"-":r.times[k]+r.back[k]+"分"}</td></tr>`).join("")}
-    <tr><td><b>合計</b></td><td>${r.sum}分</td><td>${r.cost==null?"-":r.cost-r.sum+"分"}</td><td><b>${r.cost==null?"-":r.cost+"分"}</b></td></tr>
-    </tbody></table>
-    <h2 style="margin-top:12px">人を押すと乗り換えと経路が出ます</h2>
+  const n=j.people.length, fare=d.routes.reduce((a,x)=>a+x.fare_go.yen+x.fare_back.yen,0);
+  $("#detail").innerHTML=`<h2>${dlabel(CHOSEN.iso)}・${SEL}（${n}人）</h2>
+    <div class="sum">平均 <b>${Math.round(r.cost/n)}分</b>（行き＋帰り）・平均運賃 <b>${yen(Math.round(fare/n))}</b></div>
+    <div class="tag" style="margin-bottom:6px">人を押すと乗り換えと経路が出ます</div>
     ${d.routes.map((x,i)=>`<div class="who${SELP===i?" on":""}" data-i="${i}" style="--pc:${pcol(i)}">
-        <div style="font-size:13px"><span class="chev">▼</span><i class="dot"></i><b>${x.name}</b>
-          <span class="tag">${x.from==="office"?`${x.origin}の会社から`:"自宅から"}・計 ${r.times[i]+Math.max(r.back[i],0)}分・終電 ${x.limit_s}</span></div>
-        <div class="tag"><b>交通費</b> ${yen(x.fare_go.yen+x.fare_back.yen)}（行き ${yen(x.fare_go.yen)}・帰り ${yen(x.fare_back.yen)}）${x.pass?"":"・定期なし"}</div>
-        <div class="tag"><b>行き</b> ${r.times[i]}分：${legText(x.go)}</div>
-        <div class="tag"><b>帰り</b> ${r.back[i]<0?"-":r.back[i]+"分"}（乗り換え ${r.xs&&r.xs[i]<9?r.xs[i]:"-"}回）：${legText(x.back)}</div>
+        <div class="wh"><span class="chev">▼</span><i class="dot"></i><b>${x.name}</b>
+          <span class="wt">${r.back[i]<0?"-":r.times[i]+r.back[i]+"分"}・${yen(x.fare_go.yen+x.fare_back.yen)}</span></div>
+        <div class="tag">${x.from==="office"?`${x.origin}（会社）`:`${x.home}（自宅）`}から 行き ${r.times[i]}分 ／ 帰り ${r.back[i]<0?"-":r.back[i]+"分"}（乗り換え ${r.xs&&r.xs[i]<9?r.xs[i]:"-"}回）／ 終電 ${x.limit_s}</div>
         <div class="acc">${personHTML(i)}</div>
       </div>`).join("")}`;
   $$(".who").forEach(el=>el.onclick=()=>selectPerson(+el.dataset.i));
