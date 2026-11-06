@@ -122,7 +122,8 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 .steps button:disabled{opacity:.4;cursor:default}
 .steps i{color:var(--line);font-style:normal}
 @media(max-width:700px){.stepbar{padding:6px 8px}.steps{width:100%;gap:2px}.steps button{flex:1;padding:5px 2px;font-size:11.5px}.steps i{display:none}}
-#step1{flex:1;overflow-y:auto;padding:16px}
+/* 1 の画面の背景はジョッキを並べた壁紙（2026-11-06 ユーザー指示）。ロゴと同じジョッキを薄くして、入力欄は白いカードに載せる */
+#step1{flex:1;overflow-y:auto;padding:16px;background:#fffaf0 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg opacity='.16'%3E%3Cg transform='translate%286 8%29 scale%28.62%29 rotate%28-12 32 32%29'%3E%3Cg stroke='%237a3d00' stroke-width='3.4' stroke-linejoin='round'%3E%3Cpath d='M44 26h7a6 6 0 0 1 0 12h-7z' fill='%23ffd9a0'/%3E%3Cpath d='M15 22h30v28a6 6 0 0 1-6 6H21a6 6 0 0 1-6-6z' fill='%23ffb43c'/%3E%3Cpath d='M15 22c0-6 5-9 8-9 2-4 9-5 12-2 5-2 10 1 10 6 0 3-2 5-5 5z' fill='%23fff8ee'/%3E%3C/g%3E%3Cpath d='M22 30h5v18h-5z' fill='%23ffe3a8' opacity='.9'/%3E%3C/g%3E%3Cg transform='translate%2866 66%29 scale%28.62%29 rotate%2810 32 32%29'%3E%3Cg stroke='%237a3d00' stroke-width='3.4' stroke-linejoin='round'%3E%3Cpath d='M44 26h7a6 6 0 0 1 0 12h-7z' fill='%23ffd9a0'/%3E%3Cpath d='M15 22h30v28a6 6 0 0 1-6 6H21a6 6 0 0 1-6-6z' fill='%23ffb43c'/%3E%3Cpath d='M15 22c0-6 5-9 8-9 2-4 9-5 12-2 5-2 10 1 10 6 0 3-2 5-5 5z' fill='%23fff8ee'/%3E%3C/g%3E%3Cpath d='M22 30h5v18h-5z' fill='%23ffe3a8' opacity='.9'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;background-size:120px 120px}
 .intro{display:flex;align-items:center;gap:14px;background:#eaf2fd;border:2px solid var(--accent);border-radius:12px;padding:14px 16px}
 .intro>div{flex:1;font-size:15px}
 .intro .tag{margin-top:2px;font-size:12px}
@@ -131,7 +132,16 @@ th{color:var(--muted);font-weight:600;font-size:10px}
 #sample:hover{background:#2a7de0}
 #sample:active{transform:translateY(2px);box-shadow:0 1px 0 #13509c}
 @media(max-width:700px){.intro{flex-direction:column;align-items:stretch;text-align:center}}
-.s1wrap{max-width:760px;margin:0 auto}
+.s1wrap{max-width:760px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px 18px;
+  box-shadow:0 2px 14px rgba(122,61,0,.10)}
+@media(max-width:700px){#step1{padding:10px}.s1wrap{padding:12px}}
+/* 「日付と駅を比べる」を押してから結果が出るまでのぐるぐる（2026-11-06 ユーザー指示） */
+#compare{display:flex;align-items:center;justify-content:center;gap:8px}
+#compare .spin{display:none;width:16px;height:16px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;
+  animation:spin .8s linear infinite}
+#compare.busy{cursor:progress;opacity:.85}
+#compare.busy .spin{display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
 .s1wrap h2{margin:18px 0 6px;font-size:13px;color:var(--fg)}
 .crit{display:flex;flex-direction:column;gap:6px}
 .crit label{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:var(--panel);cursor:pointer}
@@ -326,7 +336,7 @@ th{color:var(--muted);font-weight:600;font-size:10px}
       <label><input type="radio" name="crit" value="cost" checked><span><b>移動時間の合計の最小</b><span class="tag" data-note="cost"></span></span></label>
       <label><input type="radio" name="crit" value="fare"><span><b>運賃の最小</b><span class="tag" data-note="fare"></span></span></label>
     </div>
-    <button class="primary" id="compare" style="margin-top:10px">日付と駅を比べる</button>
+    <button class="primary" id="compare" style="margin-top:10px"><span class="spin" aria-hidden="true"></span><span class="lbl">日付と駅を比べる</span></button>
     <div class="tag" id="status" style="margin-top:8px"></div>
   </div>
 </section>
@@ -962,6 +972,14 @@ const keyCmp=(a,b)=>{for(let i=0;i<a.length;i++) if(a[i]!==b[i]) return a[i]-b[i
 
 /* ---------- 2. 日付と駅を決める ---------- */
 $("#compare").onclick=async()=>{
+  const b=$("#compare");
+  if(b.classList.contains("busy")) return;          // 計算中に二度押ししない
+  b.classList.add("busy"); b.setAttribute("aria-busy","true"); $("#compare .lbl").textContent="計算中…";
+  await new Promise(r=>requestAnimationFrame(()=>setTimeout(r)));   // ぐるぐるを描いてから計算に入る
+  try{ await compare() }
+  finally{ b.classList.remove("busy"); b.removeAttribute("aria-busy"); $("#compare .lbl").textContent="日付と駅を比べる" }
+};
+async function compare(){
   const st=$("#status");
   const known=new Set(META.geo.map(s=>s.n));
   const ppl=STATE.people.filter(p=>p.home.trim());
@@ -969,7 +987,7 @@ $("#compare").onclick=async()=>{
   if(ppl.length<2){st.textContent="自宅の最寄り駅を 2 人以上入れてください。";return}
   const bad=ppl.flatMap(p=>[p.home,p.office]).map(x=>x.trim()).filter(x=>x&&!known.has(x));
   if(bad.length){st.textContent=`知らない駅です: ${[...new Set(bad)].join("・")}（候補から選んでください）`;return}
-  st.textContent="計算中…";
+  st.textContent="";
   SORT=critOf();
   const out=[];
   for(const iso of STATE.dates){
@@ -988,7 +1006,7 @@ $("#compare").onclick=async()=>{
   DAYS=out; CHOSEN=null;
   st.textContent="地図を準備中…"; await MAPREADY; st.textContent="";
   go(2);
-};
+}
 
 function showDays(){
   const top=DAYS[0], N=STATE.people.filter(p=>p.home.trim()).length, C=CRIT[SORT];
