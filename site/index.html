@@ -889,12 +889,13 @@ function stationPicker(inp){
   const pick=n=>{inp.value=n;box.hidden=true;inp.classList.remove("bad");
     inp.dispatchEvent(new Event("input"));inp.dispatchEvent(new Event("change"))};
   const item=(s,i)=>`<button type="button" class="it${i===cur?" on":""}" data-n="${s.n}"><b>${s.n}</b><small>${s.k?s.k+" · ":""}${linesText(s)}</small></button>`;
-  const draw=()=>{
+  // typed: 打っている最中か。駅名を最後まで打っても候補を出す（決まった駅で入力欄に戻ったときだけ路線の一覧）
+  const draw=(typed=false)=>{
     const q=inp.value.trim();
     if(line!=null){   // 路線を選んだあと: その路線の駅を並び順に
       const r=META.rails[line]; items=r.o.map(id=>STN.find(s=>s.n===GEO[id].n)).filter(Boolean);
       box.innerHTML=`<button type="button" class="hd back">← 路線の一覧にもどる</button><div class="hd"><i class="ln" style="background:${r.c||"#999"}"></i>${r.t}（${items.length}駅）</div>`+items.map(item).join("");
-    }else if(!q||STN_BY[q]){   // 空のとき（または駅が決まっているとき）: 路線の一覧
+    }else if(!q||(!typed&&STN_BY[q])){   // 空のとき（または駅が決まった欄に戻ったとき）: 路線の一覧
       items=[];
       box.innerHTML=`<div class="hd">駅名・よみ・ローマ字で探すか、路線から選んでください。対象は関東の鉄道 10 事業者 ${META.rails.length} 路線の ${STN.length} 駅です（東急・西武・京急・小田急・京成などは入っていません）。</div>`
         +META.rails.map((r,i)=>`<button type="button" class="it line" data-l="${i}"><i class="ln" style="background:${r.c||"#999"}"></i>${r.t}<small>${r.o.length}駅</small></button>`).join("");
@@ -905,12 +906,12 @@ function stationPicker(inp){
     box.hidden=false;
   };
   inp.addEventListener("focus",()=>{line=null;cur=-1;draw()});
-  inp.addEventListener("input",e=>{if(!e.isTrusted) return;line=null;cur=-1;draw()});
+  inp.addEventListener("input",e=>{if(!e.isTrusted) return;line=null;cur=-1;draw(true)});
   inp.addEventListener("blur",()=>{setTimeout(()=>{box.hidden=true;line=null},150);
     const v=inp.value.trim(); inp.classList.toggle("bad",!!v&&!STN_BY[v])});
   inp.addEventListener("keydown",e=>{
     if(box.hidden) return;
-    if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();if(!items.length)return;cur=(cur+(e.key==="ArrowDown"?1:-1)+items.length)%items.length;draw();
+    if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();if(!items.length)return;cur=(cur+(e.key==="ArrowDown"?1:-1)+items.length)%items.length;draw(true);
       box.querySelector(".it.on")?.scrollIntoView({block:"nearest"})}
     else if(e.key==="Enter"&&items.length){e.preventDefault();pick(items[Math.max(cur,0)].n)}
     else if(e.key==="Escape"){box.hidden=true}
